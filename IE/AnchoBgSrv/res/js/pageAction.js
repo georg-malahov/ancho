@@ -1,74 +1,84 @@
 /******************************************************************************
  * pageAction.js
  * Part of Ancho browser extension framework
- * Implements aji.pageAction
+ * Implements chrome.pageAction
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onClicked'];
+var API_NAME = 'pageAction';
 //******************************************************************************
 //* main closure
-(function(me){
+var PageAction = function(instanceID) {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public methods
-    
+
   //----------------------------------------------------------------------------
-  // aji.pageAction.getPopup
-  me.getPopup = function(details, callback) {
+  // chrome.pageAction.getPopup
+  this.getPopup = function(details, callback) {
     console.debug("pageAction.getPopup(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.pageAction.getTitle
-  me.getTitle = function(details, callback) {
+  // chrome.pageAction.getTitle
+  this.getTitle = function(details, callback) {
     console.debug("pageAction.getTitle(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.pageAction.hide
-  me.hide = function(tabId) {
+  // chrome.pageAction.hide
+  this.hide = function(tabId) {
     console.debug("pageAction.hide(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.pageAction.setIcon
-  me.setIcon = function(details) {
+  // chrome.pageAction.setIcon
+  this.setIcon = function(details) {
     console.debug("pageAction.setIcon(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.pageAction.setPopup
-  me.setPopup = function(details) {
+  // chrome.pageAction.setPopup
+  this.setPopup = function(details) {
     console.debug("pageAction.setPopup(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.pageAction.setTitle
-  me.setTitle = function(details) {
+  // chrome.pageAction.setTitle
+  this.setTitle = function(details) {
     console.debug("pageAction.setTitle(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.pageAction.show
-  me.show = function(tabId) {
+  // chrome.pageAction.show
+  this.show = function(tabId) {
     console.debug("pageAction.show(..) called");
   };
 
   //============================================================================
   // events
-    
-  me.onClicked = new Event();
+
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
 
   //============================================================================
   //============================================================================
   // main initialization
 
+}
 
-}).call(this, exports);
+exports.createAPI = function(instanceID) {
+  return new PageAction(instanceID);
+}
+
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

@@ -1,50 +1,58 @@
 /******************************************************************************
  * webNavigation.js
  * Part of Ancho browser extension framework
- * Implements aji.webNavigation
+ * Implements chrome.webNavigation
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onBeforeNavigate',
+                  'onCommitted',
+                  'onCompleted',
+                  'onCreatedNavigationTarget',
+                  'onDOMContentLoaded',
+                  'onErrorOccurred',
+                  'onReferenceFragmentUpdated'];
+var API_NAME = 'webNavigation';
 //******************************************************************************
 //* main closure
-(function(me){
+exports.createAPI = function(instanceID) {
+  return new (function() {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public methods
-    
+
   //----------------------------------------------------------------------------
-  // aji.webNavigation.getAllFrames
-  me.getAllFrames = function(details, callback) {
+  // chrome.webNavigation.getAllFrames
+  this.getAllFrames = function(details, callback) {
     console.debug("webNavigation.getAllFrames(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.webNavigation.getFrame
-  me.getFrame = function(details, callback) {
+  // chrome.webNavigation.getFrame
+  this.getFrame = function(details, callback) {
     console.debug("webNavigation.getFrame(..) called");
   };
 
   //============================================================================
   // events
-    
-  me.onBeforeNavigate = new Event();
-  me.onCommitted = new Event();
-  me.onCompleted = new Event();
-  me.onCreatedNavigationTarget = new Event();
-  me.onDOMContentLoaded = new Event();
-  me.onErrorOccurred = new Event();
-  me.onReferenceFragmentUpdated = new Event();
+
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
 
   //============================================================================
   //============================================================================
   // main initialization
 
+  })();
+}
 
-}).call(this, exports);
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

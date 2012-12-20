@@ -1,0 +1,23 @@
+{
+  "name": "Ancho Chrome API Test Suite",
+  "version": "1.0",
+  "manifest_version": 2,
+  "description": "Extension to test Ancho's Chrome API implementations.",
+  "background": {
+    "page": "background.html"
+  },
+  "permissions": [
+    "tabs"
+  ],
+  "content_scripts": [
+    {
+      "js": ["content.js"]
+    }
+  ],
+	"browser_action": {
+    "default_icon": "testIcon.png",
+    "default_title": "Test Suite Browser Action",
+    "default_popup": "popup.html"
+  }
+	
+}

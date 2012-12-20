@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="AnchoBgSrv"
 	ProjectGUID="{B955A8E6-B44F-4AAF-8659-27668A1ED0FE}"
 	RootNamespace="AnchoBgSrv"
@@ -28,8 +28,8 @@
 			<Tool
 				Name="VCPreBuildEventTool"
 				Description="Copying files..."
-				CommandLine="xcopy /D &quot;$(SolutionDir)Magpie\$(ConfigurationName)\Magpie.dll&quot; &quot;$(OutDir)&quot;"
-				ExcludedFromBuild="false"
+				CommandLine="xcopy /q /y /D &quot;$(SolutionDir)Magpie\$(ConfigurationName)\Magpie.dll&quot; &quot;$(OutDir)&quot;"
+				ExcludedFromBuild="true"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -46,7 +46,7 @@
 				MkTypLibCompatible="false"
 				TargetEnvironment="1"
 				GenerateStublessProxies="true"
-				TypeLibraryName="$(IntDir)/AnchoBgSrv.tlb"
+				TypeLibraryName="$(OutDir)/AnchoBgSrv.tlb"
 				HeaderFileName="AnchoBgSrv_i.h"
 				DLLDataFileName=""
 				InterfaceIdentifierFileName="AnchoBgSrv_i.c"
@@ -56,7 +56,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)Magpie\include&quot;;&quot;$(SolutionDir)libbhohelper\libbhohelper&quot;;&quot;$(SolutionDir)libprothandlers\include&quot;;&quot;$(SolutionDir)anchocommons&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)Magpie\include&quot;;&quot;$(SolutionDir)libbhohelper\libbhohelper&quot;;&quot;$(SolutionDir)libprothandlers\include&quot;;&quot;$(SolutionDir)anchocommons&quot;;&quot;$(OutDir)&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -72,17 +72,18 @@
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
 				Culture="1033"
-				AdditionalIncludeDirectories="$(IntDir)"
+				AdditionalIncludeDirectories="$(OutDir)"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				RegisterOutput="true"
 				IgnoreImportLibrary="true"
 				AdditionalDependencies="libbhohelper.lib libprothandlers.lib Wininet.lib anchocommons.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;$(SolutionDir)libbhohelper\$(ConfigurationName)&quot;;&quot;$(SolutionDir)libprothandlers\$(ConfigurationName)&quot;;&quot;$(SolutionDir)anchocommons\$(ConfigurationName)&quot;"
+				AdditionalLibraryDirectories="&quot;$(OutDir)&quot;;&quot;$(SolutionDir)anchocommons\$(ConfigurationName)&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -123,7 +124,8 @@
 			<Tool
 				Name="VCPreBuildEventTool"
 				Description="Copying files..."
-				CommandLine="xcopy /D &quot;$(SolutionDir)Magpie\$(ConfigurationName)\Magpie.dll&quot; &quot;$(OutDir)&quot;"
+				CommandLine="xcopy /q /y /D &quot;$(SolutionDir)Magpie\$(ConfigurationName)\Magpie.dll&quot; &quot;$(OutDir)&quot;"
+				ExcludedFromBuild="true"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -140,7 +142,7 @@
 				MkTypLibCompatible="false"
 				TargetEnvironment="1"
 				GenerateStublessProxies="true"
-				TypeLibraryName="$(IntDir)/AnchoBgSrv.tlb"
+				TypeLibraryName="$(OutDir)/AnchoBgSrv.tlb"
 				HeaderFileName="AnchoBgSrv_i.h"
 				DLLDataFileName=""
 				InterfaceIdentifierFileName="AnchoBgSrv_i.c"
@@ -150,7 +152,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)Magpie\include&quot;;&quot;$(SolutionDir)libbhohelper\libbhohelper&quot;;&quot;$(SolutionDir)libprothandlers\include&quot;;&quot;$(SolutionDir)anchocommons&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)Magpie\include&quot;;&quot;$(SolutionDir)libbhohelper\libbhohelper&quot;;&quot;$(SolutionDir)libprothandlers\include&quot;;&quot;$(SolutionDir)anchocommons&quot;;&quot;$(OutDir)&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="2"
@@ -164,7 +166,7 @@
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
 				Culture="1033"
-				AdditionalIncludeDirectories="$(IntDir)"
+				AdditionalIncludeDirectories="$(OutDir)"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -174,7 +176,7 @@
 				IgnoreImportLibrary="true"
 				AdditionalDependencies="libbhohelper.lib libprothandlers.lib Wininet.lib anchocommons.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(SolutionDir)libbhohelper\$(ConfigurationName)&quot;;&quot;$(SolutionDir)libprothandlers\$(ConfigurationName)&quot;;&quot;$(SolutionDir)anchocommons\$(ConfigurationName)&quot;"
+				AdditionalLibraryDirectories="&quot;$(OutDir)&quot;;&quot;$(SolutionDir)anchocommons\$(ConfigurationName)&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -243,6 +245,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\IECookie.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\IECookieManager.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\LogView.cpp"
 				>
 			</File>
@@ -252,6 +262,10 @@
 			</File>
 			<File
 				RelativePath=".\LogWindow.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\PopupWindow.cpp"
 				>
 			</File>
 			<File
@@ -301,6 +315,18 @@
 				>
 			</File>
 			<File
+				RelativePath=".\CommandQueue.h"
+				>
+			</File>
+			<File
+				RelativePath=".\IECookie.h"
+				>
+			</File>
+			<File
+				RelativePath=".\IECookieManager.h"
+				>
+			</File>
+			<File
 				RelativePath=".\LogView.h"
 				>
 			</File>
@@ -310,6 +336,10 @@
 			</File>
 			<File
 				RelativePath=".\LogWindow.h"
+				>
+			</File>
+			<File
+				RelativePath=".\PopupWindow.h"
 				>
 			</File>
 			<File
@@ -379,7 +409,155 @@
 			>
 		</File>
 		<File
+			RelativePath=".\res\js\bookmarks.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\browserAction.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\specifications\browserAction_spec.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\toolbars\browserActionToolbar.html"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\browsingData.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\contentSettings.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\contextMenus.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\cookies.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\specifications\cookies_spec.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\events.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\extension.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\fileBrowserHandler.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\history.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\i18n.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\idle.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\logwindow\jquery.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\logwindow\log.html"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\management.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\omnibox.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\pageAction.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\pageCapture.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\permissions.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\privacy.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\proxy.js"
+			>
+		</File>
+		<File
 			RelativePath=".\ReadMe.txt"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\storage.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\tabs.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\specifications\tabs_spec.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\topSites.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\tts.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\ttsEngine.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\utils\typeChecking.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\utils\utils.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\webNavigation.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\webRequest.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\webstore.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\windows.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\specifications\windows_spec.js"
 			>
 		</File>
 	</Files>

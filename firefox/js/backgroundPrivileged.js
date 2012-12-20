@@ -1,11 +1,18 @@
 const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 
 Cu.import('resource://gre/modules/Services.jsm');
-Cu.import('resource://trusted-ads/modules/State.jsm');
-Cu.import('resource://trusted-ads/modules/Utils.jsm');
-Cu.import('resource://trusted-ads/modules/Scripting.jsm');
-Cu.import('resource://trusted-ads/modules/BrowserEvents.jsm');
-Cu.import('resource://trusted-ads/modules/Toolbar.jsm');
+Cu.import('resource://ancho/modules/Require.jsm');
+
+var sandbox = Cu.Sandbox(window);
+var baseURI = Services.io.newURI('resource://ancho/js/', '', null);
+var require = Require.createRequireForWindow(sandbox, baseURI);
+
+var ExtensionState = require('./state');
+var applyContentScripts = require('./scripting').applyContentScripts;
+var loadHtml = require('./scripting').loadHtml;
+var BrowserEvents = require('./browserEvents');
+var Toolbar = require('./toolbar');
+var Config = require('./config');
 
 function createWindowUnloader(win) {
   return function(event) {
@@ -37,8 +44,8 @@ function windowLoaded(window) {
 }
 
 function watchOnWindowLoad(window) {
-  window.addEventListener('load', function(event) {
-    window.removeEventListener('load', arguments.callee, false);
+  window.addEventListener('DOMContentLoaded', function(event) {
+    window.removeEventListener('DOMContentLoaded', arguments.callee, false);
     windowLoaded(window);
   }, false);
 }
@@ -75,19 +82,27 @@ function releaseWindowWatcher() {
 
 window.addEventListener('load', function(event) {
   window.removeEventListener('load', arguments.callee, false);
-
-  ExtensionState.backgroundWindow = window;
-
+  ExtensionState.startSingletonAPIs(window);
   createWindowWatcher();
-
+  var spec = Config.backgroundPage
+        ? Config.hostExtensionRoot + Config.backgroundPage
+        // Cannot use 'about:blank' here, because DOM for 'about:blank'
+        // is inappropriate for script inserting: neither 'document.head'
+        // nor 'document.body' are defined.
+        : 'chrome://ancho/content/html/blank.html';
   var browser = document.getElementById('content');
-  loadHtml(document, browser, 'chrome://trusted-ads/content/html/background.html');
+  loadHtml(document, browser, spec, function(targetWindow) {
+    // load background scripts, if any
+    for (var i = 0; i < Config.backgroundScripts.length; i++) {
+      var script = targetWindow.document.createElement('script');
+      script.src = Config.hostExtensionRoot + Config.backgroundScripts[i];
+      targetWindow.document.head.appendChild(script);
+    }
+  });
 }, false);
 
 window.addEventListener('unload', function(event) {
   window.removeEventListener('unload', arguments.callee, false);
-
   releaseWindowWatcher();
-
   ExtensionState.unloadAll();
 }, false);

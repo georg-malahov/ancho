@@ -8,6 +8,7 @@
  *
  * Global objects available:
  *  addonAPI      :   The addon object (IAnchoBackgroundAPI)
+ *  serviceAPI    :   The central service managing all addons (IAnchoServiceApi)
  ******************************************************************************/
 
 // get manifest
@@ -20,40 +21,93 @@ console.info("Loading extension [" + addonAPI.id + "] [" + addonAPI.guid + "]");
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// exports.chrome will be available to background pages as 'chrome'.
-// This name is defined in anchocommons/strings.cpp
 exports.chrome = {};
 
+var API_NAMES = ["bookmarks",
+    "browserAction",
+    "browsingData",
+    "contentSettings",
+    "contextMenus",
+    "cookies",
+    "events",
+    "extension",
+    "fileBrowserHandler",
+    "history",
+    "i18n",
+    "idle",
+    "management",
+    "omnibox",
+    "pageAction",
+    "pageCapture",
+    "permissions",
+    "privacy",
+    "proxy",
+    "storage",
+    "tabs",
+    "topSites",
+    "tts",
+    "ttsEngine",
+    "webNavigation",
+    "webRequest",
+    "webstore",
+    "windows"];
+
 // create and initialize the background API
-(function(chrome){
-  chrome.bookmarks = require("bookmarks.js");
-  chrome.browserAction = require("browserAction.js");
-  chrome.browsingData = require("browsingData.js");
-  chrome.contentSettings = require("contentSettings.js");
-  chrome.contextMenus = require("contextMenus.js");
-  chrome.cookies = require("cookies.js");
-  chrome.extension = require("extension.js");
-  chrome.fileBrowserHandler = require("fileBrowserHandler.js");
-  chrome.history = require("history.js");
-  chrome.i18n = require("i18n.js");
-  chrome.idle = require("idle.js");
-  chrome.management = require("management.js");
-  chrome.omnibox = require("omnibox.js");
-  chrome.pageAction = require("pageAction.js");
-  chrome.pageCapture = require("pageCapture.js");
-  chrome.permissions = require("permissions.js");
-  chrome.privacy = require("privacy.js");
-  chrome.proxy = require("proxy.js");
-  chrome.storage = require("storage.js");
-  chrome.tabs = require("tabs.js");
-  chrome.topSites = require("topSites.js");
-  chrome.tts = require("tts.js");
-  chrome.ttsEngine = require("ttsEngine.js");
-  chrome.webNavigation = require("webNavigation.js");
-  chrome.webRequest = require("webRequest.js");
-  chrome.webstore = require("webstore.js");
-  chrome.windows = require("windows.js");
-})(exports.chrome)
+function getFullAPI(chrome, aInstance) {
+  for (var i = 0; i < API_NAMES.length; ++i) {
+    console.debug("Creating chrome." + API_NAMES[i] + " API instance n. " + aInstance);
+    chrome[API_NAMES[i]] = require(API_NAMES[i] + ".js").createAPI(aInstance);
+  }
+}
+
+function releaseFullAPIInstance(aInstance) {
+  for (var i = 0; i < API_NAMES.length; ++i) {
+    console.debug("Releasing chrome." + API_NAMES[i] + " API instance n. " + aInstance);
+    require(API_NAMES[i] + ".js").releaseAPI(aInstance);
+  }
+}
+
+// exports.chrome will be available to background pages as 'chrome'.
+// This name is defined in anchocommons/strings.cpp
+getFullAPI(exports.chrome, 0);
+exports.console = console;
+
+//***************************************************
+//*********** MANAGING CHROME API INSTANCES ********
+
+// ------------- INSTANCE IDs ----------------------
+//    0         - background script
+//    >0        - content scripts - equals tabId
+//    [-20..-1] - reserved for errors
+//    <-20      - other full APIs (popups)
+// ------------- INSTANCE IDs ----------------------
+
+var fullAPINextID = -21;
+
+
+var fullAPIInstances = {};
+
+exports.reserveFullAPIInstanceID = function() {
+  return fullAPINextID--;
+}
+
+exports.createFullAPI = function(aInstanceID) {
+  var chromeAPI = {};
+  getFullAPI(chromeAPI, aInstanceID);
+  fullAPIInstances[aInstanceID] = chromeAPI;
+  return chromeAPI;
+};
+
+exports.releaseFullAPI = function(aInstanceID) {
+  if (fullAPIInstances[aInstanceID]) {
+    releaseFullAPIInstance(aInstanceID);
+    delete fullAPIInstances[aInstanceID]
+  }
+};
+
+var browserAction = require("browserAction.js");
+browserAction.initBrowserAction(manifest.browser_action);
+
 
 //------------------------------------------------------------------------------
 // CONTENT API
@@ -64,12 +118,13 @@ exports.chrome = {};
 var contentInstances = {};
 
 // Content API constructor
-function contentAPI(instanceID) {
-  console.debug("Content API created: [" + instanceID + "]");
-}
 // the content API gets composed here. Decide which methods and objects should
 // be part of the content API.
-contentAPI.prototype.extension = exports.chrome.extension;
+function contentAPI(instanceID) {
+  this.extension = require("extension.js").createAPI(instanceID);
+  this.console = console;// TODO: remove
+  console.debug("Content API created: [" + instanceID + "]");
+}
 
 //------------------------------------------------------------------------------
 // INTERNAL API
@@ -80,9 +135,17 @@ contentAPI.prototype.extension = exports.chrome.extension;
 // Called from the addon when a new browser window or tab opens
 exports.getContentAPI = function(instanceID) {
   console.debug("getContentAPI for: [" + instanceID + "]");
-  return (contentInstances[instanceID])
+  var api = (contentInstances[instanceID]
     ? contentInstances[instanceID]
-    : contentInstances[instanceID] = new contentAPI(instanceID);
+    : contentInstances[instanceID] = new contentAPI(instanceID));
+  var scripts = (
+    manifest.content_scripts instanceof Array
+    && manifest.content_scripts.length > 0
+    && manifest.content_scripts[0].js instanceof Array
+    ? manifest.content_scripts[0].js
+    : []
+  );
+  return { api: api, scripts: scripts };
 };
 
 // Releases an instance of the content API for a certain tab.
@@ -91,10 +154,16 @@ exports.getContentAPI = function(instanceID) {
 exports.releaseContentAPI = function(instanceID) {
   console.debug("Content API release requested for [" + instanceID + "]");
   if (contentInstances[instanceID]) {
+    require("extension.js").releaseAPI(instanceID)
     delete contentInstances[instanceID];
     console.debug("Content API FOUND and released: [" + instanceID + "]");
   }
 };
+
+function invokeEvent(aEventName, aIDispatchData) {
+  require("cookies.js").invokeEventWithIDispatch(aEventName, aIDispatchData);
+}
+addonAPI.setIDispatchEventInvocationHandler(invokeEvent);
 
 //------------------------------------------------------------------------------
 // MAIN

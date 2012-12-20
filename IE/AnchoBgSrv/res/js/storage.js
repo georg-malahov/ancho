@@ -1,34 +1,43 @@
 /******************************************************************************
  * storage.js
  * Part of Ancho browser extension framework
- * Implements aji.storage
+ * Implements chrome.storage
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onChanged'];
+var API_NAME = 'storage';
 //******************************************************************************
 //* main closure
-(function(me){
+exports.createAPI = function(instanceID) {
+  return new (function() {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public properties
-    
-  me.sync = null;
-  me.local = null;
+
+  this.sync = null;
+  this.local = null;
   //============================================================================
   // events
-    
-  me.onChanged = new Event();
+
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
 
   //============================================================================
   //============================================================================
   // main initialization
 
 
-}).call(this, exports);
+})();
+}
+
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

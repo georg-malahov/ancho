@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "AnchoAddon.h"
 #include "dllmain.h"
+#include "ProtocolHandlerRegistrar.h"
 
 extern class CanchoModule _AtlModule;
 
@@ -16,7 +17,8 @@ extern class CanchoModule _AtlModule;
 
 //----------------------------------------------------------------------------
 //  Init
-STDMETHODIMP CAnchoAddon::Init(LPCOLESTR lpsExtensionID, IAnchoAddonService * pService, IWebBrowser2 * pWebBrowser)
+STDMETHODIMP CAnchoAddon::Init(LPCOLESTR lpsExtensionID, IAnchoAddonService * pService,
+  IWebBrowser2 * pWebBrowser)
 {
   m_pWebBrowser = pWebBrowser;
   m_pAnchoService = pService;
@@ -57,12 +59,11 @@ STDMETHODIMP CAnchoAddon::Init(LPCOLESTR lpsExtensionID, IAnchoAddonService * pS
     return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
   }
 
-  // advise DWebBrowserEvents2
-  ATLASSERT(!m_dwAdviseSinkWebBrowser);
-  AtlAdvise(m_pWebBrowser, (IUnknown*)(DWebBrowserEvents2Ancho*)this, DIID_DWebBrowserEvents2, &m_dwAdviseSinkWebBrowser);
+  IF_FAILED_RET(CProtocolHandlerRegistrar::
+    RegisterTemporaryFolderHandler(s_AnchoProtocolHandlerScheme, m_sExtensionName, m_sExtensionPath));
 
   // get addon instance
-  IF_FAILED_RET(m_pAnchoService->GetExtension(CComBSTR(m_sExtensionName), &m_pAddonBackground));
+  //IF_FAILED_RET(m_pAnchoService->GetAddonBackground(CComBSTR(m_sExtensionName), &m_pAddonBackground));
 
   // The addon can be a resource DLL or simply a folder in the filesystem.
   // TODO: Load the DLL if there is any.
@@ -90,15 +91,6 @@ STDMETHODIMP CAnchoAddon::Init(LPCOLESTR lpsExtensionID, IAnchoAddonService * pS
   IF_FAILED_RET(CreateMagpieInstance(&m_Magpie));
 #endif
 
-  // get console
-  m_pBackgroundConsole = m_pAddonBackground;
-  ATLASSERT(m_pBackgroundConsole);
-
-  // tell background we are there and get instance id
-  IF_FAILED_RET(m_pAddonBackground->AdviseInstance(&m_InstanceID));
-
-  // get content our API
-  IF_FAILED_RET(m_pAddonBackground->GetContentAPI(m_InstanceID, &m_pContentAPI));
   return S_OK;
 }
 
@@ -107,7 +99,8 @@ STDMETHODIMP CAnchoAddon::Init(LPCOLESTR lpsExtensionID, IAnchoAddonService * pS
 STDMETHODIMP CAnchoAddon::Shutdown()
 {
   // this method must be safe to be called multiple times
-  m_pContentAPI.Release();
+  CleanupContentScripting();
+  m_pContentInfo.Release();
   m_pBackgroundConsole.Release();
   m_Magpie.Release();
 
@@ -121,67 +114,114 @@ STDMETHODIMP CAnchoAddon::Shutdown()
 
   if (m_pWebBrowser)
   {
-    if (m_dwAdviseSinkWebBrowser)
-    {
-      AtlUnadvise(m_pWebBrowser, DIID_DWebBrowserEvents2, m_dwAdviseSinkWebBrowser);
-      m_dwAdviseSinkWebBrowser = 0;
-    }
     m_pWebBrowser.Release();
   }
   return S_OK;
 }
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoAddon::executeScriptCode(BSTR aCode)
+{
+  //TODO: it needs method which is not implmented in magpie yet
+  return S_OK;
+}
 
 //----------------------------------------------------------------------------
-//  BrowserNavigateCompleteEvent
-STDMETHODIMP_(void) CAnchoAddon::BrowserNavigateCompleteEvent(IDispatch *pDisp, VARIANT *URL)
+//
+STDMETHODIMP CAnchoAddon::executeScriptFile(BSTR aFile)
 {
+  //TODO: improve, when manifest processing finished
+  ATLASSERT(m_Magpie);
+  return m_Magpie->Run(aFile);
+}
+
+//----------------------------------------------------------------------------
+//  CleanupContentScripting
+void CAnchoAddon::CleanupContentScripting()
+{
+  if (m_Magpie) {
+    m_Magpie->Shutdown();
+  }
+  DOMWindowWrapper::ComObject * p = m_wrappedWindow.Detach();
+  if (p) {
+    p->forceDelete();
+    p = NULL;
+  }
+}
+
+//----------------------------------------------------------------------------
+//  InitializeContentScripting
+STDMETHODIMP CAnchoAddon::InitializeContentScripting(IWebBrowser2* pBrowser, BSTR bstrUrl, documentLoadPhase aPhase)
+{
+  //If create AddonBackground sooner - background script will be executed before initialization of tab windows
+  if(!m_pAddonBackground || !m_pBackgroundConsole) {
+    IF_FAILED_RET(m_pAnchoService->GetAddonBackground(CComBSTR(m_sExtensionName), &m_pAddonBackground));
+
+    // get console
+    m_pBackgroundConsole = m_pAddonBackground;
+    ATLASSERT(m_pBackgroundConsole);
+  }
+  if(!m_pContentInfo) {
+    // tell background we are there and get instance id
+    m_pAddonBackground->AdviseInstance(&m_InstanceID);
+
+     //TODO - should be executed as soon as possible
+    m_pAnchoService->webBrowserReady();
+
+    // get content our API
+    m_pAddonBackground->GetContentAPI(m_InstanceID, &m_pContentInfo);
+  }
+
   // content script handling happens here
 
   // no frame handling
   // TODO: decide how to handle frames
-  if (!m_pWebBrowser.IsEqualObject(pDisp))
-  {
-    // pDisp is the webbrowser control of a frame
-    return;
+  if (!m_pWebBrowser.IsEqualObject(pBrowser)) {
+    return S_OK;
   }
 
-  if (!m_pContentAPI)
-  {
-    return;
+  if (aPhase != documentLoadEnd) {
+    return S_OK;
   }
 
-  // TODO: URL matching
+  if (!m_pContentInfo) {
+    return S_OK;
+  }
+
   // (re)initialize magpie for this page
-  m_Magpie->Shutdown();
-  HRESULT hr = m_Magpie->Init();
-  if (FAILED(hr))
-  {
-    return;
-  }
+  CleanupContentScripting();
+
+  CString s;
+  s.Format(_T("Ancho content [%s] [%i]"), m_sExtensionName, m_InstanceID);
+  IF_FAILED_RET(m_Magpie->Init((LPWSTR)(LPCWSTR)s));
 
   // add a loader for scripts in the extension filesystem
-  hr = m_Magpie->AddFilesystemScriptLoader((LPWSTR)(LPCWSTR)m_sExtensionPath);
-  if (FAILED(hr))
-  {
-    return;
-  }
+  IF_FAILED_RET(m_Magpie->AddFilesystemScriptLoader((LPWSTR)(LPCWSTR)m_sExtensionPath));
 
   // inject items: chrome, console and window with global members
-//  CComQIPtr<IDispatch> pDispConsole;
-  CComQIPtr<IWebBrowser2> pWebBrowser(pDisp);
-  CIDispatchHelper script = CIDispatchHelper::GetScriptDispatch(pWebBrowser);
-  if (!script)
-  {
-    return;
+  CComQIPtr<IWebBrowser2> pWebBrowser(pBrowser);
+  ATLASSERT(pWebBrowser);
+
+  CIDispatchHelper contentInfo(m_pContentInfo);
+  CComVariant jsObj;
+  IF_FAILED_RET((contentInfo.Get<CComVariant, VT_DISPATCH, IDispatch*>(L"api", jsObj)));
+
+  IF_FAILED_RET(DOMWindowWrapper::createInstance(pWebBrowser, m_wrappedWindow))
+  m_Magpie->AddNamedItem(L"chrome", jsObj.pdispVal, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_CODEONLY);
+  m_Magpie->AddNamedItem(L"window", m_wrappedWindow, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_GLOBALMEMBERS);
+
+  // get the name(s) of content scripts from manifest and run them in order
+  IF_FAILED_RET((contentInfo.Get<CComVariant, VT_DISPATCH, IDispatch*>(L"scripts", jsObj)));
+
+  VariantVector scripts;
+  IF_FAILED_RET(addJSArrayToVariantVector(jsObj.pdispVal, scripts));
+
+  // scripts array is in reverse order here!
+  for(VariantVector::reverse_iterator it = scripts.rbegin(); it != scripts.rend(); it++) {
+    if( it->vt == VT_BSTR ) {
+      m_Magpie->ExecuteGlobal(it->bstrVal);
+    }
   }
 
-  m_Magpie->AddNamedItem(L"chrome", m_pContentAPI, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_CODEONLY);
-  //m_Magpie->AddNamedItem(L"console", pDispConsole, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_CODEONLY);
-  m_Magpie->AddNamedItem(L"window", script.p, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_GLOBALMEMBERS);
-
-  // TODO: get the name(s) of content scripts from manifest and run them in order
-  //       for now we run a hardcoded script "content.js"
-  // and run content script
-  m_Magpie->Run(L"content.js");
+  return S_OK;
 }
-

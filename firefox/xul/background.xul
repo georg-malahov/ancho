@@ -4,17 +4,19 @@
   orient="horizontal"
   height="300"
   width="300"
-  windowtype="aji-hidden"
+  windowtype="ancho-hidden"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <!-- privileged code -->
-  <script src="chrome://trusted-ads/content/backgroundPrivileged.js"/>
+  <script src="chrome://ancho/content/js/backgroundPrivileged.js"/>
 
   <!-- container for popup panels -->
   <popupset id="popup_container">
   </popupset>
 
   <!-- regular code -->
-  <browser id="content" />
+  <groupbox flex="1">
+    <browser id="content" flex="1"/>
+  </groupbox>
 
 </window>

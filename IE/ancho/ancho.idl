@@ -9,18 +9,6 @@ import "ocidl.idl";
 import "exdisp.idl";
 
 [
-	object,
-	uuid(06550FFB-49D7-4428-A5FF-2CC688A8001F),
-	oleautomation,
-	nonextensible,
-	helpstring("IAnchoRuntime Interface"),
-	pointer_default(unique)
-]
-interface IAnchoRuntime : IUnknown
-{
-};
-
-[
 	uuid(DBBBF00D-3AB6-45BA-BE51-B5D8EFECD127),
 	version(1.0),
 	helpstring("ancho 1.0 Type Library")
@@ -30,6 +18,12 @@ library anchoLib
 	importlib("stdole2.tlb");
   importlib("AnchoBgSrv.tlb");
 
+  typedef enum _documentLoadPhase
+  {
+    documentLoadStart = 0,
+    documentLoadEnd = 1,
+    documentLoadIdle = 2
+  } documentLoadPhase;
   [
 	  object,
 	  uuid(2E63BFC0-E51B-4317-A814-601A606E7C4C),
@@ -40,10 +34,29 @@ library anchoLib
   interface IAnchoAddon : IUnknown
   {
     HRESULT Init([in] LPCOLESTR lpsExtensionID, [in] IAnchoAddonService * pService, [in] IWebBrowser2 * pWebBrowser);
+    HRESULT InitializeContentScripting([in] IWebBrowser2 * pWebBrowser, [in] BSTR bstrUrl, documentLoadPhase aPhase);
     HRESULT Shutdown();
+
+    HRESULT executeScriptCode(BSTR aCode);
+    HRESULT executeScriptFile(BSTR aFile);
   };
 
-	[
+  [
+	  object,
+	  uuid(AEBCA26A-1917-11E2-845E-E50E6188709B),
+	  dual,
+	  nonextensible,
+	  helpstring("DAnchoBrowserEvents Interface"),
+	  pointer_default(unique)
+  ]
+  interface DAnchoBrowserEvents : IDispatch
+  {
+    [id(1)] HRESULT OnFrameStart([in] BSTR bstrUrl, [in] VARIANT_BOOL bIsMainFrame);
+    [id(2)] HRESULT OnFrameEnd([in] BSTR bstrUrl, [in] VARIANT_BOOL IsMainFrame);
+    [id(3)] HRESULT OnFrameRedirect([in] BSTR bstrOldUrl, [in] BSTR bstrNewUrl);
+  };
+
+  [
 		uuid(BC66BD3D-2AB6-4672-8EF3-DB2BD089CD60),
 		helpstring("AnchoRuntime Class")
 	]
@@ -51,4 +64,13 @@ library anchoLib
 	{
 		[default] interface IAnchoRuntime;
 	};
+
+  [
+    uuid(F17D18AF-307A-4311-852F-FD759863A349),
+    helpstring("Toolbar Class")
+  ]
+  coclass IEToolbar
+  {
+    [default] interface IUnknown;
+  };
 };

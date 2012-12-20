@@ -1,38 +1,47 @@
 /******************************************************************************
  * idle.js
  * Part of Ancho browser extension framework
- * Implements aji.idle
+ * Implements chrome.idle
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onStateChanged'];
+var API_NAME = 'idle';
 //******************************************************************************
 //* main closure
-(function(me){
+exports.createAPI = function(instanceID) {
+  return new (function() {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public methods
-    
+
   //----------------------------------------------------------------------------
-  // aji.idle.queryState
-  me.queryState = function(thresholdSeconds, callback) {
+  // chrome.idle.queryState
+  this.queryState = function(thresholdSeconds, callback) {
     console.debug("idle.queryState(..) called");
   };
 
   //============================================================================
   // events
-    
-  me.onStateChanged = new Event();
+
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
 
   //============================================================================
   //============================================================================
   // main initialization
 
 
-}).call(this, exports);
+  })();
+}
+
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

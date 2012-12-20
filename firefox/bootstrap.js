@@ -1,4 +1,5 @@
 const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
+
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/AddonManager.jsm');
 
@@ -9,10 +10,14 @@ Cu.import('resource://gre/modules/AddonManager.jsm');
 var backgroundWindow = null;
 var xulWindow = null;
 
+// require function created at startup()
+var require = null;
+
 function createBackground() {
+
   backgroundWindow = Services.ww.openWindow(
     null, // parent
-    'chrome://trusted-ads/content/background.xul', // url
+    'chrome://ancho/content/xul/background.xul',
     null, // window name
     null, // features
     null  // extra arguments
@@ -59,36 +64,44 @@ function setResourceSubstitution(addon) {
   // in the extension directly.
   var resourceProtocol = Services.io.getProtocolHandler('resource').
     QueryInterface(Ci.nsIResProtocolHandler);
-  resourceProtocol.setSubstitution('trusted-ads', addon.getResourceURI('/'));
+  resourceProtocol.setSubstitution('ancho', addon.getResourceURI('/'));
 }
 
 function loadConfig(addon) {
   // Load the manifest
-  Cu.import('resource://trusted-ads/modules/Config.jsm');
-  Cu.import('resource://trusted-ads/modules/Utils.jsm');
-  if (addon.hasResource('manifest.json')) {
-    var manifestUrl = addon.getResourceURI('manifest.json');
-    var manifest = Utils.readStringFromUrl(manifestUrl);
+  Cu.import('resource://ancho/modules/Require.jsm');
+  var baseURI = Services.io.newURI('resource://ancho/', '', null);
+  require = Require.createRequireForWindow(this, baseURI);
+
+  var Config = require('./js/config');
+  var readStringFromUrl = require('./js/utils').readStringFromUrl;
+
+  if (addon.hasResource('chrome-ext/manifest.json')) {
+    var manifestUrl = addon.getResourceURI('chrome-ext/manifest.json');
+    var manifest = readStringFromUrl(manifestUrl);
     var config = JSON.parse(manifest);
     // Set the module search path if any
     if ('module_search_path' in config) {
       for (var i=0; i<config.module_search_path.length; i++) {
-        Config.MODULE_SEARCH_PATH.push(Services.io.newURI(config.module_search_path[i], '', manifestUrl));
+        Require.moduleSearchPath.push(Services.io.newURI(config.module_search_path[i], '', manifestUrl));
       }
     }
     if ('content_scripts' in config) {
-      for (i=0; i<config.content_scripts.length; i++) {
+      for (var i=0; i<config.content_scripts.length; i++) {
         var scriptInfo = config.content_scripts[i];
         var matches = [];
         for (var j=0; j<scriptInfo.matches.length; j++) {
           // Convert from Google's simple wildcard syntax to a proper regular expression
-          matches.push(scriptInfo.matches[j].replace('*', '.*', 'g'));
+          matches.push(
+            scriptInfo.matches[j]
+              .replace('<all_urls>', '*')
+              .replace(/\./g, '\\.')
+              .replace(/\*/g, '.*')
+          );
         }
         var js = [];
-        for (j=0; j<scriptInfo.js.length; j++) {
-          // Prefix ID with ./ so we know to resolve from the base script URL.
-          // (Otherwise the module path would be used.)
-          js.push('./' + scriptInfo.js[j]);
+        for (var j=0; j<scriptInfo.js.length; j++) {
+          js.push(scriptInfo.js[j]);
         }
         Config.contentScripts.push({
           matches: matches,
@@ -96,24 +109,32 @@ function loadConfig(addon) {
         });
       }
     }
-  }
+    if (config.background) {
+      var bg = config.background;
+      if (bg.page) {
+        Config.backgroundPage = bg.page;
+      }
+      if (bg.scripts) {
+        for (var i=0; i<bg.scripts.length; i++) {
+          Config.backgroundScripts.push(bg.scripts[i]);
+        }
+      }
+    } // background
+  } // has manifest.json?
 }
 
 function unloadBackgroundScripts() {
-  Config.contentScripts = [];
+  require('./js/config').contentScripts = [];
 }
 
 // When the extension is activated:
 //
 function startup(data, reason) {
-  dump('\nproduct: starting up ...\n\n');
+  dump('\nAncho: starting up ...\n\n');
 
-  // TODO: Set addon ID using preprocessor.
-  AddonManager.getAddonByID('product@vendor.com', function(addon) {
+  AddonManager.getAddonByID('ancho@salsitasoft.com', function(addon) {
     setResourceSubstitution(addon);
-
     loadConfig(addon);
-
     createBackground();
   });
 }
@@ -121,19 +142,11 @@ function startup(data, reason) {
 // When the extension is deactivated:
 //
 function shutdown(data, reason) {
-  dump('\ntrusted-ads: shutting down ...\n\n');
+  dump('\nAncho: shutting down ...\n\n');
 
   releaseBackground();
   unloadBackgroundScripts();
 
   // Unload the modules so that we will load new versions if the add-on is installed again.
-  // (Very useful for debugging purposes.)
-  Cu.unload('resource://trusted-ads/modules/Config.jsm');
-  Cu.unload('resource://trusted-ads/modules/Utils.jsm');
-  Cu.unload('resource://trusted-ads/modules/State.jsm');
-  Cu.unload('resource://trusted-ads/modules/Scripting.jsm');
-  Cu.unload('resource://trusted-ads/modules/BrowserEvents.jsm');
-  Cu.unload('resource://trusted-ads/modules/API.jsm');
-  Cu.unload('resource://trusted-ads/modules/Toolbar.jsm');
-  Cu.unload('resource://trusted-ads/modules/LocalStorage.jsm');
+  Cu.unload('resource://ancho/modules/Require.jsm');
 }

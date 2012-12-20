@@ -1,57 +1,66 @@
 /******************************************************************************
  * permissions.js
  * Part of Ancho browser extension framework
- * Implements aji.permissions
+ * Implements chrome.permissions
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onAdded', 'onRemoved'];
+var API_NAME = 'permissions';
 //******************************************************************************
 //* main closure
-(function(me){
+var Permissions = function(instanceID) {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public methods
-    
+
   //----------------------------------------------------------------------------
-  // aji.permissions.contains
-  me.contains = function(permissions, callback) {
+  // chrome.permissions.contains
+  this.contains = function(permissions, callback) {
     console.debug("permissions.contains(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.permissions.getAll
-  me.getAll = function(callback) {
+  // chrome.permissions.getAll
+  this.getAll = function(callback) {
     console.debug("permissions.getAll(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.permissions.remove
-  me.remove = function(permissions, callback) {
+  // chrome.permissions.remove
+  this.remove = function(permissions, callback) {
     console.debug("permissions.remove(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.permissions.request
-  me.request = function(permissions, callback) {
+  // chrome.permissions.request
+  this.request = function(permissions, callback) {
     console.debug("permissions.request(..) called");
   };
 
   //============================================================================
   // events
-    
-  me.onAdded = new Event();
-  me.onRemoved = new Event();
+
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
 
   //============================================================================
   //============================================================================
   // main initialization
 
+}
 
-}).call(this, exports);
+exports.createAPI = function(instanceID) {
+  return new Permissions(instanceID);
+}
+
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

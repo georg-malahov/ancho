@@ -1,77 +1,87 @@
 /******************************************************************************
  * management.js
  * Part of Ancho browser extension framework
- * Implements aji.management
+ * Implements chrome.management
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onDisabled',
+                  'onEnabled',
+                  'onInstalled',
+                  'onUninstalled'];
+var API_NAME = 'management';
 //******************************************************************************
 //* main closure
-(function(me){
+var Management = function(instanceID) {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public methods
-    
+
   //----------------------------------------------------------------------------
-  // aji.management.get
-  me.get = function(id, callback) {
+  // chrome.management.get
+  this.get = function(id, callback) {
     console.debug("management.get(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.management.getAll
-  me.getAll = function(callback) {
+  // chrome.management.getAll
+  this.getAll = function(callback) {
     console.debug("management.getAll(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.management.getPermissionWarningsById
-  me.getPermissionWarningsById = function(id, callback) {
+  // chrome.management.getPermissionWarningsById
+  this.getPermissionWarningsById = function(id, callback) {
     console.debug("management.getPermissionWarningsById(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.management.getPermissionWarningsByManifest
-  me.getPermissionWarningsByManifest = function(manifestStr, callback) {
+  // chrome.management.getPermissionWarningsByManifest
+  this.getPermissionWarningsByManifest = function(manifestStr, callback) {
     console.debug("management.getPermissionWarningsByManifest(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.management.launchApp
-  me.launchApp = function(id, callback) {
+  // chrome.management.launchApp
+  this.launchApp = function(id, callback) {
     console.debug("management.launchApp(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.management.setEnabled
-  me.setEnabled = function(id, enabled, callback) {
+  // chrome.management.setEnabled
+  this.setEnabled = function(id, enabled, callback) {
     console.debug("management.setEnabled(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.management.uninstall
-  me.uninstall = function(id, callback) {
+  // chrome.management.uninstall
+  this.uninstall = function(id, callback) {
     console.debug("management.uninstall(..) called");
   };
 
   //============================================================================
   // events
-    
-  me.onDisabled = new Event();
-  me.onEnabled = new Event();
-  me.onInstalled = new Event();
-  me.onUninstalled = new Event();
+
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
 
   //============================================================================
   //============================================================================
   // main initialization
 
+}
 
-}).call(this, exports);
+exports.createAPI = function(instanceID) {
+  return new Management(instanceID);
+}
+
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

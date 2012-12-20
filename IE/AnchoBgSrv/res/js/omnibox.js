@@ -1,41 +1,49 @@
 /******************************************************************************
  * omnibox.js
  * Part of Ancho browser extension framework
- * Implements aji.omnibox
+ * Implements chrome.omnibox
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onInputCancelled',
+                  'onInputChanged',
+                  'onInputEntered',
+                  'onInputStarted'];
+var API_NAME = 'omnibox';
 //******************************************************************************
 //* main closure
-(function(me){
+exports.createAPI = function(instanceID) {
+  return new (function() {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public methods
-    
+
   //----------------------------------------------------------------------------
-  // aji.omnibox.setDefaultSuggestion
-  me.setDefaultSuggestion = function(suggestion) {
+  // chrome.omnibox.setDefaultSuggestion
+  this.setDefaultSuggestion = function(suggestion) {
     console.debug("omnibox.setDefaultSuggestion(..) called");
   };
 
   //============================================================================
   // events
-    
-  me.onInputCancelled = new Event();
-  me.onInputChanged = new Event();
-  me.onInputEntered = new Event();
-  me.onInputStarted = new Event();
+
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
 
   //============================================================================
   //============================================================================
   // main initialization
 
+  })();
+}
 
-}).call(this, exports);
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

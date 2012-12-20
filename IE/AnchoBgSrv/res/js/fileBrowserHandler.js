@@ -1,28 +1,35 @@
 /******************************************************************************
  * fileBrowserHandler.js
  * Part of Ancho browser extension framework
- * Implements aji.fileBrowserHandler
+ * Implements chrome.fileBrowserHandler
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onExecute'];
+var API_NAME = 'fileBrowserHandler';
 //******************************************************************************
 //* main closure
-(function(me){
+exports.createAPI = function(instanceID) {
+  return new (function() {
   //============================================================================
   // private variables
-  
+
   //============================================================================
   // events
-    
-  me.onExecute = new Event();
 
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
   //============================================================================
   //============================================================================
   // main initialization
 
+})();
+}
 
-}).call(this, exports);
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

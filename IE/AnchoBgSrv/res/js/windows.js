@@ -1,82 +1,122 @@
 /******************************************************************************
  * windows.js
  * Part of Ancho browser extension framework
- * Implements aji.windows
+ * Implements chrome.windows
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+require("windows_spec.js");
+var preprocessArguments = require("typeChecking.js").preprocessArguments;
+var notImplemented = require("typeChecking.js").notImplemented;
+var addonRootURL = require("extension.js").addonRootURL;
+
+
+var EVENT_LIST = ['onCreated',
+                  'onFocusChanged',
+                  'onRemoved'];
+var API_NAME = 'windows';
+
+exports.WINDOW_ID_NONE = -1;
+exports.WINDOW_ID_CURRENT = -2;
 //******************************************************************************
 //* main closure
-(function(me){
+var Windows = function(instanceID) {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public properties
-    
-  me.WINDOW_ID_NONE = null;
-  me.WINDOW_ID_CURRENT = null;
+
+  this.WINDOW_ID_NONE = exports.WINDOW_ID_NONE;
+  this.WINDOW_ID_CURRENT = exports.WINDOW_ID_CURRENT;
 
   //============================================================================
   // public methods
-    
+
   //----------------------------------------------------------------------------
-  // aji.windows.create
-  me.create = function(createData, callback) {
-    console.debug("windows.create(..) called");
+  // chrome.windows.create
+  this.create = function(createData, callback) {
+    var args = preprocessArguments('chrome.windows.create', arguments);
+    serviceAPI.createWindow(args['createData'], Object, args['callback']);
   };
 
   //----------------------------------------------------------------------------
-  // aji.windows.get
-  me.get = function(windowId, getInfo, callback) {
-    console.debug("windows.get(..) called");
+  // chrome.windows.get
+  this.get = function(windowId, getInfo, callback) {
+    var args = preprocessArguments('chrome.windows.get', arguments);
+    var winId = args['windowId'];
+    if (winId === this.WINDOW_ID_CURRENT) {
+      winId = serviceAPI.getCurrentWindowId();
+    }
+    var win = serviceAPI.getWindow(winId, Object, (args['getInfo'] && args['getInfo'].populate));
+    args['callback'](win);
   };
 
   //----------------------------------------------------------------------------
-  // aji.windows.getAll
-  me.getAll = function(getInfo, callback) {
-    console.debug("windows.getAll(..) called");
+  // chrome.windows.getAll
+  this.getAll = function(getInfo, callback) {
+    var args = preprocessArguments('chrome.windows.getAll', arguments);
+    var windowsSafeArray = serviceAPI.getAllWindows(Object, (args['getInfo'] && args['getInfo'].populate));
+    var windows = new VBArray(windowsSafeArray).toArray();
+    args['callback'](windows);
   };
 
   //----------------------------------------------------------------------------
-  // aji.windows.getCurrent
-  me.getCurrent = function(getInfo, callback) {
-    console.debug("windows.getCurrent(..) called");
+  // chrome.windows.getCurrent
+  this.getCurrent = function(getInfo, callback) {
+    var args = preprocessArguments('chrome.windows.getCurrent', arguments);
+    this.get(this.WINDOW_ID_CURRENT, getInfo, callback);
   };
 
   //----------------------------------------------------------------------------
-  // aji.windows.getLastFocused
-  me.getLastFocused = function(getInfo, callback) {
-    console.debug("windows.getLastFocused(..) called");
+  // chrome.windows.getLastFocused
+  this.getLastFocused = function(getInfo, callback) {
+    var args = notImplemented('chrome.windows.getLastFocused', arguments);
   };
 
   //----------------------------------------------------------------------------
-  // aji.windows.remove
-  me.remove = function(windowId, callback) {
-    console.debug("windows.remove(..) called");
+  // chrome.windows.remove
+  this.remove = function(windowId, callback) {
+    var args = preprocessArguments('chrome.windows.remove', arguments);
+    serviceAPI.closeWindow(args['windowId']);
+    if (args['callback']) {
+      args['callback']();
+    }
   };
 
   //----------------------------------------------------------------------------
-  // aji.windows.update
-  me.update = function(windowId, updateInfo, callback) {
-    console.debug("windows.update(..) called");
+  // chrome.windows.update
+  this.update = function(windowId, updateInfo, callback) {
+    var args = preprocessArguments('chrome.windows.update', arguments);
+    serviceAPI.updateWindow(args.windowId, args.updateInfo);
+    if (args.callback) {
+      this.get(args.windowId, { populate: false }, args.callback);
+    }
   };
 
+  this.test = function() {
+    serviceAPI.createPopupWindow(addonRootURL + "popup.html");
+  }
   //============================================================================
   // events
-    
-  me.onCreated = new Event();
-  me.onFocusChanged = new Event();
-  me.onRemoved = new Event();
 
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
   //============================================================================
   //============================================================================
   // main initialization
 
+}
 
-}).call(this, exports);
+exports.createAPI = function(instanceID) {
+  return new Windows(instanceID);
+}
+
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}

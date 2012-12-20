@@ -9,13 +9,16 @@
 #include "AnchoAddonService.h"
 //#include "AnchoBackgroundConsole.h"
 
+#include <algorithm>
+
+
 /*============================================================================
  * class CAnchoBackgroundAPI
  */
 
 #ifndef MAGPIE_REGISTERED
 // need the function info for logging in case magpie is not registered
-_ATL_FUNC_INFO CAnchoBackgroundAPI::info_Console_LogFunction = {CC_STDCALL,VT_EMPTY,2,{VT_VARIANT,VT_BSTR}};
+_ATL_FUNC_INFO CAnchoBackgroundAPI::info_Console_LogFunction = {CC_STDCALL,VT_EMPTY,2,{VT_BSTR,VT_ARRAY|VT_VARIANT}};
 #endif
 
 // string identifyer used in console logging for background
@@ -23,7 +26,7 @@ LPCTSTR CAnchoBackgroundAPI::s_BackgroundLogIdentifyer = _T("background");
 
 //----------------------------------------------------------------------------
 //  Init
-HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BSTR bsID, LPCTSTR lpszGUID, LPCTSTR lpszPath)
+HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BSTR bsID, LPCTSTR lpszGUID, LPCTSTR lpszPath, IAnchoServiceApi *pServiceApi)
 {
   // set our ID
   m_bsID = bsID;
@@ -32,6 +35,9 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
   m_sRootURL = lpszRootURL;
 
   CString sPath(lpszPath);
+
+  // set service API inteface
+  m_ServiceApi = pServiceApi;
 
   // create logger window
   IF_FAILED_RET(CLogWindow::CreateLogWindow(&m_LogWindow.p));
@@ -55,6 +61,10 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
   }
   IF_FAILED_RET(CreateMagpieInstance(&m_Magpie));
 #endif
+  CString appName;
+  appName.Format(_T("Ancho background [%s]"), m_bsID);
+  m_Magpie->Init((LPWSTR)(LPCWSTR)appName);
+
   // add a loader for scripts in the extension filesystem
   IF_FAILED_RET(m_Magpie->AddFilesystemScriptLoader((LPWSTR)(LPCWSTR)sPath));
 
@@ -86,6 +96,7 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
 
   // set ourselfs in magpie as a global accessible object
   IF_FAILED_RET(m_Magpie->AddExtension((LPWSTR)s_AnchoGlobalAPIObjectName, (IAnchoBackgroundAPI*)this));
+  IF_FAILED_RET(m_Magpie->AddExtension((LPWSTR)s_AnchoServiceAPIName, pServiceApi));
 
   // initialize Ancho API
   // api.js will do now additional initialization, like looking at the manifest
@@ -96,21 +107,21 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 HRESULT CAnchoBackgroundAPI::FinalConstruct()
 {
   return S_OK;
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 void CAnchoBackgroundAPI::FinalRelease()
 {
   UnInit();
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 void CAnchoBackgroundAPI::UnInit()
 {
   if (m_BackgroundWindow)
@@ -136,7 +147,7 @@ void CAnchoBackgroundAPI::UnInit()
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 HRESULT CAnchoBackgroundAPI::GetLogWindow(CLogWindowComObject * & pLogWindow)
 {
   if (!m_LogWindow)
@@ -147,7 +158,7 @@ HRESULT CAnchoBackgroundAPI::GetLogWindow(CLogWindowComObject * & pLogWindow)
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 HRESULT CAnchoBackgroundAPI::GetContentAPI(ULONG ulInstanceID, LPDISPATCH* ppDisp)
 {
   ENSURE_RETVAL(ppDisp);
@@ -170,7 +181,7 @@ HRESULT CAnchoBackgroundAPI::GetContentAPI(ULONG ulInstanceID, LPDISPATCH* ppDis
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 HRESULT CAnchoBackgroundAPI::ReleaseContentAPI(ULONG ulInstanceID)
 {
   if (!m_Magpie)
@@ -189,7 +200,7 @@ HRESULT CAnchoBackgroundAPI::ReleaseContentAPI(ULONG ulInstanceID)
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 BOOL CAnchoBackgroundAPI::GetURL(CStringW & sURL)
 {
   CString s;
@@ -202,9 +213,14 @@ BOOL CAnchoBackgroundAPI::GetURL(CStringW & sURL)
   }
   return b;
 }
-
 //----------------------------------------------------------------------------
-//  
+//
+void CAnchoBackgroundAPI::OnAddonServiceReleased()
+{
+  m_ServiceApi.Release();
+}
+//----------------------------------------------------------------------------
+//
 HRESULT CAnchoBackgroundAPI::GetMainModuleExportsScript(CIDispatchHelper & script)
 {
   // get the main api module
@@ -223,7 +239,7 @@ HRESULT CAnchoBackgroundAPI::GetMainModuleExportsScript(CIDispatchHelper & scrip
 //----------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------
-//  
+//
 STDMETHODIMP CAnchoBackgroundAPI::get_id(BSTR * pVal)
 {
   ENSURE_RETVAL(pVal);
@@ -231,7 +247,7 @@ STDMETHODIMP CAnchoBackgroundAPI::get_id(BSTR * pVal)
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 STDMETHODIMP CAnchoBackgroundAPI::get_guid(BSTR * pVal)
 {
   ENSURE_RETVAL(pVal);
@@ -240,18 +256,16 @@ STDMETHODIMP CAnchoBackgroundAPI::get_guid(BSTR * pVal)
 }
 
 //----------------------------------------------------------------------------
-//  
+//
 STDMETHODIMP CAnchoBackgroundAPI::startBackgroundWindow(BSTR bsPartialURL)
 {
   // it's safe to call this method multiple times, anyhow the window
   // will be created only once
-  if (m_BackgroundWindow)
-  {
+  if (m_BackgroundWindow) {
     return S_OK;
   }
   CStringW sURL(bsPartialURL);
-  if (!GetURL(sURL))
-  {
+  if (!GetURL(sURL)) {
     return E_FAIL;
   }
 
@@ -262,14 +276,167 @@ STDMETHODIMP CAnchoBackgroundAPI::startBackgroundWindow(BSTR bsPartialURL)
   CComPtr<IDispatch> mainModuleExports;
   IF_FAILED_RET(mainModule->GetExportsObject(&mainModuleExports));
 
-  CComVariant vt;
-  IF_FAILED_RET(mainModuleExports.GetPropertyByName(s_AnchoBackgroundPageAPIName, &vt));
-  if (vt.vt != VT_DISPATCH)
-  {
+  CComVariant chromeVT;
+  IF_FAILED_RET(mainModuleExports.GetPropertyByName(s_AnchoBackgroundPageAPIName, &chromeVT));
+  if (chromeVT.vt != VT_DISPATCH) {
     return E_FAIL;
   }
 
-  IF_FAILED_RET(CBackgroundWindow::CreateBackgroundWindow(vt.pdispVal, sURL, &m_BackgroundWindow.p));
+  CComVariant consoleVT;
+  IF_FAILED_RET(mainModuleExports.GetPropertyByName(s_AnchoBackgroundConsoleObjectName, &consoleVT));
+  if (consoleVT.vt != VT_DISPATCH) {
+    return E_FAIL;
+  }
+
+  DispatchMap injectedObjects;
+  injectedObjects[s_AnchoBackgroundPageAPIName] = chromeVT.pdispVal;
+  injectedObjects[s_AnchoBackgroundConsoleObjectName] = consoleVT.pdispVal;
+
+  IF_FAILED_RET(CBackgroundWindow::CreateBackgroundWindow(injectedObjects, sURL, &m_BackgroundWindow.p));
+  return S_OK;
+}
+
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoBackgroundAPI::addEventObject(BSTR aEventName, INT aInstanceId, LPDISPATCH aListener)
+{
+  try {
+    std::wstring eventName(aEventName, SysStringLen(aEventName));
+
+    EventObjectList &managers = m_EventObjects[eventName];
+    managers.push_back(EventObjectRecord(eventName, aInstanceId, aListener));
+  } catch (std::bad_alloc &) {
+    ATLTRACE(L"Adding event object %s::%d failed : %s", aEventName, aInstanceId);
+    return E_FAIL;
+  }
+  return S_OK;
+}
+
+//----------------------------------------------------------------------------
+//
+struct FindEventByInstanceIdFunctor
+{
+  FindEventByInstanceIdFunctor(int aInstanceId): instanceId(aInstanceId) {}
+  int instanceId;
+  bool operator()(const CAnchoBackgroundAPI::EventObjectRecord &aRec) {
+    return aRec.instanceID == instanceId;
+  }
+};
+STDMETHODIMP CAnchoBackgroundAPI::removeEventObject(BSTR aEventName, INT aInstanceId)
+{
+  std::wstring eventName(aEventName, SysStringLen(aEventName));
+  EventObjectMap::iterator it = m_EventObjects.find(eventName);
+  if (it == m_EventObjects.end()) {
+    return S_OK;
+  }
+  it->second.remove_if(FindEventByInstanceIdFunctor(aInstanceId));
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+
+STDMETHODIMP CAnchoBackgroundAPI::callFunction(LPDISPATCH aFunction, LPDISPATCH aArgs, VARIANT* aRet)
+{
+  ENSURE_RETVAL(aRet);
+  CIDispatchHelper function(aFunction);
+  VariantVector args;
+
+  IF_FAILED_RET(addJSArrayToVariantVector(aArgs, args));
+  return function.InvokeN((DISPID)0, args.size()>0? &(args[0]): NULL, args.size(), aRet);
+}
+
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoBackgroundAPI::invokeEventObject(BSTR aEventName, INT aSelectedInstance, BOOL aSkipInstance, LPDISPATCH aArgs, VARIANT* aRet)
+{
+  ENSURE_RETVAL(aRet);
+
+  VariantVector args;
+  VariantVector results;
+
+  HRESULT hr = addJSArrayToVariantVector(aArgs, args);
+  if (FAILED(hr)) {
+      return hr;
+  }
+  hr = invokeEvent(aEventName, aSelectedInstance, aSkipInstance != FALSE, args, results);
+  if (FAILED(hr)) {
+      return hr;
+  }
+  return constructSafeArrayFromVector(results, *aRet);
+}
+
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoBackgroundAPI::invokeEventWithIDispatchArgument(BSTR aEventName, LPDISPATCH aArg)
+{
+  if (!m_InvokeEventWithIDispatch) {
+    return E_FAIL;
+  }
+  CComVariant eventName(aEventName);
+  CComVariant dispatchObject(aArg);
+  return m_InvokeEventWithIDispatch.Invoke2((DISPID)0, &eventName, &dispatchObject);
+}
+
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoBackgroundAPI::setIDispatchEventInvocationHandler(LPDISPATCH aFunction)
+{
+  m_InvokeEventWithIDispatch = aFunction;
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+
+struct InvokeSelectedEventFunctor
+{
+  InvokeSelectedEventFunctor(VariantVector &aArgs, VariantVector &aResults, int aSelectedInstance)
+    : mArgs(aArgs), mResults(aResults), mSelectedInstance(aSelectedInstance) { }
+  VariantVector &mArgs;
+  VariantVector &mResults;
+  int mSelectedInstance;
+
+  void operator()(CAnchoBackgroundAPI::EventObjectRecord &aRec) {
+    if (aRec.instanceID == mSelectedInstance) {
+      CComVariant result;
+      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, mArgs.size(), &result);
+      if (result.vt == VT_DISPATCH) {
+        addJSArrayToVariantVector(result.pdispVal, mResults);
+      }
+    }
+  }
+};
+
+struct InvokeUnselectedEventFunctor
+{
+  InvokeUnselectedEventFunctor(VariantVector &aArgs, VariantVector &aResults, int aSelectedInstance)
+    : mArgs(aArgs), mResults(aResults), mSelectedInstance(aSelectedInstance) { }
+  VariantVector &mArgs;
+  VariantVector &mResults;
+  int mSelectedInstance;
+
+  void operator()(CAnchoBackgroundAPI::EventObjectRecord &aRec) {
+    if (aRec.instanceID != mSelectedInstance) {
+      CComVariant result;
+      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, mArgs.size(), &result);
+      if (result.vt == VT_DISPATCH) {
+        addJSArrayToVariantVector(result.pdispVal, mResults);
+      }
+    }
+  }
+};
+
+STDMETHODIMP CAnchoBackgroundAPI::invokeEvent(BSTR aEventName, INT aSelectedInstance, bool aSkipInstance, VariantVector &aArgs, VariantVector &aResults)
+{
+  std::wstring eventName(aEventName, SysStringLen(aEventName));
+  EventObjectMap::iterator it = m_EventObjects.find(eventName);
+  if (it == m_EventObjects.end()) {
+    return S_OK;
+  }
+  if(aSkipInstance) {
+    std::for_each(it->second.begin(), it->second.end(), InvokeUnselectedEventFunctor(aArgs, aResults, aSelectedInstance));
+  } else {
+    std::for_each(it->second.begin(), it->second.end(), InvokeSelectedEventFunctor(aArgs, aResults, aSelectedInstance));
+  }
   return S_OK;
 }
 
@@ -278,51 +445,51 @@ STDMETHODIMP CAnchoBackgroundAPI::startBackgroundWindow(BSTR bsPartialURL)
 //----------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------
-//  
-STDMETHODIMP_(void) CAnchoBackgroundAPI::OnLog(VARIANT val, BSTR bsModuleID)
+//
+STDMETHODIMP_(void) CAnchoBackgroundAPI::OnLog(BSTR bsModuleID, SAFEARRAY* pVals)
 {
   if (m_LogWindow)
   {
-    m_LogWindow->log(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, val);
+    m_LogWindow->log(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, pVals);
   }
 }
 
 //----------------------------------------------------------------------------
-//  
-STDMETHODIMP_(void) CAnchoBackgroundAPI::OnDebug(VARIANT val, BSTR bsModuleID)
+//
+STDMETHODIMP_(void) CAnchoBackgroundAPI::OnDebug(BSTR bsModuleID, SAFEARRAY* pVals)
 {
   if (m_LogWindow)
   {
-    m_LogWindow->debug(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, val);
+    m_LogWindow->debug(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, pVals);
   }
 }
 
 //----------------------------------------------------------------------------
-//  
-STDMETHODIMP_(void) CAnchoBackgroundAPI::OnInfo(VARIANT val, BSTR bsModuleID)
+//
+STDMETHODIMP_(void) CAnchoBackgroundAPI::OnInfo(BSTR bsModuleID, SAFEARRAY* pVals)
 {
   if (m_LogWindow)
   {
-    m_LogWindow->info(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, val);
+    m_LogWindow->info(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, pVals);
   }
 }
 
 //----------------------------------------------------------------------------
-//  
-STDMETHODIMP_(void) CAnchoBackgroundAPI::OnWarn(VARIANT val, BSTR bsModuleID)
+//
+STDMETHODIMP_(void) CAnchoBackgroundAPI::OnWarn(BSTR bsModuleID, SAFEARRAY* pVals)
 {
   if (m_LogWindow)
   {
-    m_LogWindow->warn(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, val);
+    m_LogWindow->warn(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, pVals);
   }
 }
 
 //----------------------------------------------------------------------------
-//  
-STDMETHODIMP_(void) CAnchoBackgroundAPI::OnError(VARIANT val, BSTR bsModuleID)
+//
+STDMETHODIMP_(void) CAnchoBackgroundAPI::OnError(BSTR bsModuleID, SAFEARRAY* pVals)
 {
   if (m_LogWindow)
   {
-    m_LogWindow->error(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, val);
+    m_LogWindow->error(CComBSTR(s_BackgroundLogIdentifyer), bsModuleID, pVals);
   }
 }

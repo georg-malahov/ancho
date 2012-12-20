@@ -26,6 +26,10 @@ const wchar_t * s_AnchoProtocolHandlerScheme =
 const wchar_t * s_AnchoGlobalAPIObjectName =
     L"addonAPI";
 
+// JS object name of the service API in background scripts
+const wchar_t * s_AnchoServiceAPIName =
+    L"serviceAPI";
+
 // JS object name of the background API in main API script
 const wchar_t * s_AnchoBackgroundAPIObjectName =
     L"anchoBackgroundAPI";
@@ -37,6 +41,9 @@ const wchar_t * s_AnchoBackgroundAPIObjectName =
 const wchar_t * s_AnchoBackgroundPageAPIName =
     L"chrome";
 
+const wchar_t * s_AnchoBackgroundConsoleObjectName =
+    L"console";
+
 // name of the exported function for getting a content API
 const wchar_t * s_AnchoFnGetContentAPI =
     L"getContentAPI";
@@ -45,4 +52,8 @@ const wchar_t * s_AnchoFnGetContentAPI =
 // name of the exported function for releasing a content API
 const wchar_t * s_AnchoFnReleaseContentAPI =
     L"releaseContentAPI";
+
+// name of the exported function for releasing a content API
+const wchar_t * s_AnchoTabIDPropertyName =
+    L"AnchoTabID";
 

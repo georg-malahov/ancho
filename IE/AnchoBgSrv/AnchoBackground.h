@@ -69,15 +69,18 @@ public:
   // Init initializes everything (loads the addon, manifest, magpie etc)
   HRESULT Init(LPCTSTR                    lpszThisPath,
                CAnchoAddonServiceCallback * pAddonServiceCallback,
+               IAnchoServiceApi           * pServiceApi,
                BSTR                       bsID);
 
-  // AddonServiceLost is called from CAnchoAddonService::FinalRelease, means, when
+  // OnAddonServiceReleased is called from CAnchoAddonService::FinalRelease, means, when
   // CAnchoAddonService gets destroyed. It sets the callback pointer to NULL so
   // that CAnchoAddonService can not be called any more.
   // Since clients might still hold references to this object we can't simply
   // destroy everything here, so cleanup is done in FinalRelease().
-  void AddonServiceLost();
+  void OnAddonServiceReleased();
 
+  STDMETHOD(invokeExternalEventObject)(BSTR aEventName, LPDISPATCH aArgs, VARIANT* aRet);
+  STDMETHOD(invokeEventWithIDispatchArgument)(BSTR aEventName, LPDISPATCH aArg);
 public:
   // -------------------------------------------------------------------------
   // IAnchoAddonBackground methods. See .idl for description.
@@ -88,11 +91,11 @@ public:
 
   // -------------------------------------------------------------------------
   // IAnchoBackgroundConsole methods. See .idl for description.
-  STDMETHOD(log)(BSTR bsSource, BSTR bsModuleID, VARIANT val);
-  STDMETHOD(debug)(BSTR bsSource, BSTR bsModuleID, VARIANT val);
-  STDMETHOD(info)(BSTR bsSource, BSTR bsModuleID, VARIANT val);
-  STDMETHOD(warn)(BSTR bsSource, BSTR bsModuleID, VARIANT val);
-  STDMETHOD(error)(BSTR bsSource, BSTR bsModuleID, VARIANT val);
+  STDMETHOD(log)(BSTR bsSource, BSTR bsModuleID, SAFEARRAY* pVals);
+  STDMETHOD(debug)(BSTR bsSource, BSTR bsModuleID, SAFEARRAY* pVals);
+  STDMETHOD(info)(BSTR bsSource, BSTR bsModuleID, SAFEARRAY* pVals);
+  STDMETHOD(warn)(BSTR bsSource, BSTR bsModuleID, SAFEARRAY* pVals);
+  STDMETHOD(error)(BSTR bsSource, BSTR bsModuleID, SAFEARRAY* pVals);
 
 private:
   // -------------------------------------------------------------------------

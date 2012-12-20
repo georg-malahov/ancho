@@ -1,69 +1,78 @@
 /******************************************************************************
  * history.js
  * Part of Ancho browser extension framework
- * Implements aji.history
+ * Implements chrome.history
  * Copyright 2012 Salsita software (http://www.salsitasoft.com).
  ******************************************************************************/
-  
+
 //******************************************************************************
 //* requires
-var Event = require("Event.js").Event;
-  
+var Event = require("events.js").Event;
+var EventFactory = require("utils.js").EventFactory;
+
+var EVENT_LIST = ['onVisitRemoved', 'onVisited'];
+var API_NAME = 'history';
 //******************************************************************************
 //* main closure
-(function(me){
+var History = function(instanceID) {
   //============================================================================
   // private variables
-  
+
 
   //============================================================================
   // public methods
-    
+
   //----------------------------------------------------------------------------
-  // aji.history.addUrl
-  me.addUrl = function(details, callback) {
+  // chrome.history.addUrl
+  this.addUrl = function(details, callback) {
     console.debug("history.addUrl(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.history.deleteAll
-  me.deleteAll = function(callback) {
+  // chrome.history.deleteAll
+  this.deleteAll = function(callback) {
     console.debug("history.deleteAll(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.history.deleteRange
-  me.deleteRange = function(range, callback) {
+  // chrome.history.deleteRange
+  this.deleteRange = function(range, callback) {
     console.debug("history.deleteRange(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.history.deleteUrl
-  me.deleteUrl = function(details, callback) {
+  // chrome.history.deleteUrl
+  this.deleteUrl = function(details, callback) {
     console.debug("history.deleteUrl(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.history.getVisits
-  me.getVisits = function(details, callback) {
+  // chrome.history.getVisits
+  this.getVisits = function(details, callback) {
     console.debug("history.getVisits(..) called");
   };
 
   //----------------------------------------------------------------------------
-  // aji.history.search
-  me.search = function(query, callback) {
+  // chrome.history.search
+  this.search = function(query, callback) {
     console.debug("history.search(..) called");
   };
 
   //============================================================================
   // events
-    
-  me.onVisitRemoved = new Event();
-  me.onVisited = new Event();
+
+  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
 
   //============================================================================
   //============================================================================
   // main initialization
 
+}
 
-}).call(this, exports);
+exports.createAPI = function(instanceID) {
+  return new History(instanceID);
+}
+
+exports.releaseAPI = function(instanceID) {
+  EventFactory.releaseEvents(instanceID, API_NAME, EVENT_LIST);
+}
