@@ -194,6 +194,7 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
   // Check if this is a new tab we are creating programmatically.
   // If so redirect it to the correct URL.
   std::wstring url(pURL->bstrVal, SysStringLen(pURL->bstrVal));
+
   //TODO - use headers instead of url
   size_t first = url.find_first_of(L'#');
   size_t last = url.find_last_of(L'#');

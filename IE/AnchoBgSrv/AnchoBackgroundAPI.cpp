@@ -391,7 +391,7 @@ STDMETHODIMP CAnchoBackgroundAPI::callFunction(LPDISPATCH aFunction, LPDISPATCH 
   CIDispatchHelper function(aFunction);
   VariantVector args;
 
-  IF_FAILED_RET(addJSArrayToVariantVector(aArgs, args));
+  IF_FAILED_RET(addJSArrayToVariantVector(aArgs, args, true));
   return function.InvokeN((DISPID)0, args.size()>0? &(args[0]): NULL, args.size(), aRet);
 }
 
@@ -404,7 +404,7 @@ STDMETHODIMP CAnchoBackgroundAPI::invokeEventObject(BSTR aEventName, INT aSelect
   VariantVector args;
   VariantVector results;
 
-  HRESULT hr = addJSArrayToVariantVector(aArgs, args);
+  HRESULT hr = addJSArrayToVariantVector(aArgs, args, true);
   if (FAILED(hr)) {
       return hr;
   }

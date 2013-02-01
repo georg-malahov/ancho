@@ -11,13 +11,17 @@ var Event = require("events.js").Event;
 
 exports.EventFactory = {
 
-  createEvents : function(targetAPI, instanceID, apiName, eventNames) {
+  createEventsEx: function(targetAPI, instanceID, apiName, eventNames, EventConstructor) {
     for (i = 0; i < eventNames.length; ++i) {
-      targetAPI[eventNames[i]] = new Event(apiName + '.' + eventNames[i], instanceID);
+      targetAPI[eventNames[i]] = new EventConstructor(apiName + '.' + eventNames[i], instanceID);
     }
   },
 
-  releaseEvents : function(instanceID, apiName, eventNames) {
+  createEvents: function(targetAPI, instanceID, apiName, eventNames) {
+    this.createEventsEx(targetAPI, instanceID, apiName, eventNames, Event);
+  },
+
+  releaseEvents: function(instanceID, apiName, eventNames) {
     for (i = 0; i < eventNames.length; ++i) {
       addonAPI.removeEventObject(apiName + '.' + eventNames[i], instanceID);
     }
@@ -28,7 +32,8 @@ exports.EventFactory = {
 //Type checking utilities - instanceof and typeof are not working well when used
 //on objects from different script dispach instances
 exports.isArray = function(aArg) {
-  return Object.prototype.toString.call(aArg) === '[object Array]';
+  return ("length" in aArg);
+  //return Object.prototype.toString.call(aArg) === '[object Array]';
 }
 
 exports.isFunction = function(aArg) {

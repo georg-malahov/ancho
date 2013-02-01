@@ -17,7 +17,7 @@ STDMETHODIMP CAnchoBrowserEvents::OnFrameStart(BSTR bstrUrl, VARIANT_BOOL bIsMai
 {
   CComVariant vt[] = { (VARIANT_BOOL) (bIsMainFrame ? VARIANT_TRUE : VARIANT_FALSE), bstrUrl };
   DISPPARAMS disp = { vt, NULL, 2, 0 };
-  return FireEvent(1, &disp, 2);
+  return FireEvent(EID_ONFRAMESTART, &disp, 2);
 }
 
 //----------------------------------------------------------------------------
@@ -26,7 +26,7 @@ STDMETHODIMP CAnchoBrowserEvents::OnFrameEnd(BSTR bstrUrl, VARIANT_BOOL bIsMainF
 {
   CComVariant vt[] = { (VARIANT_BOOL) (bIsMainFrame ? VARIANT_TRUE : VARIANT_FALSE), bstrUrl };
   DISPPARAMS disp = { vt, NULL, 2, 0 };
-  return FireEvent(2, &disp, 2);
+  return FireEvent(EID_ONFRAMEEND, &disp, 2);
 }
 
 //----------------------------------------------------------------------------
@@ -35,7 +35,25 @@ STDMETHODIMP CAnchoBrowserEvents::OnFrameRedirect(BSTR bstrOldUrl, BSTR bstrNewU
 {
   CComVariant vt[] = { bstrNewUrl, bstrOldUrl };
   DISPPARAMS disp = { vt, NULL, 2, 0 };
-  return FireEvent(3, &disp, 2);
+  return FireEvent(EID_ONFRAMEREDIRECT, &disp, 2);
+}
+
+//----------------------------------------------------------------------------
+//  OnBeforeRequest
+STDMETHODIMP CAnchoBrowserEvents::OnBeforeRequest(VARIANT aReporter)
+{
+  CComVariant vt[] = { CComVariant(aReporter) };
+  DISPPARAMS disp = { vt, NULL, 1, 0 };
+  return FireEvent(EID_ONBEFOREREQUEST, &disp, 1);
+}
+
+//----------------------------------------------------------------------------
+//  OnBeforeSendHeaders
+STDMETHODIMP CAnchoBrowserEvents::OnBeforeSendHeaders(VARIANT aReporter)
+{
+  CComVariant vt[] = { CComVariant(aReporter) };
+  DISPPARAMS disp = { vt, NULL, 1, 0 };
+  return FireEvent(EID_ONBEFORESENDHEADERS, &disp, 1);
 }
 
 //----------------------------------------------------------------------------
