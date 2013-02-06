@@ -116,7 +116,7 @@ STDMETHODIMP CAnchoProtocolSink::BeginningTransaction(
             if (!wszAdditionalHeaders) {
               return E_OUTOFMEMORY;
             }
-            wcscpy(wszAdditionalHeaders, pNewObject->mNewHeaders.m_str);
+            wcscpy_s(wszAdditionalHeaders, pNewObject->mNewHeaders.Length()+1, pNewObject->mNewHeaders.m_str);
             wszAdditionalHeaders[pNewObject->mNewHeaders.Length()] = 0;
             *pszAdditionalHeaders = wszAdditionalHeaders;
           }

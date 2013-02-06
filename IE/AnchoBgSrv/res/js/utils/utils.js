@@ -11,12 +11,18 @@ var Event = require("events.js").Event;
 
 exports.EventFactory = {
 
+  /**
+   * Creates specified event objects by invoking provided event constructor
+   **/
   createEventsEx: function(targetAPI, instanceID, apiName, eventNames, EventConstructor) {
     for (i = 0; i < eventNames.length; ++i) {
       targetAPI[eventNames[i]] = new EventConstructor(apiName + '.' + eventNames[i], instanceID);
     }
   },
 
+  /**
+   * Creates specified event objects by invoking default event constructor
+   **/
   createEvents: function(targetAPI, instanceID, apiName, eventNames) {
     this.createEventsEx(targetAPI, instanceID, apiName, eventNames, Event);
   },
@@ -54,6 +60,7 @@ exports.isNumber = function(aArg) {
 }
 
 exports.isArray = function(aArg) {
+  //Interface checking is probably only safe way to determine if aArg is array like object
   return aArg != undefined
     && aArg != null
     && !exports.isString(aArg)
@@ -109,6 +116,9 @@ exports.stringColorRepresentation = function(aColor) {
   throw new Error('Unsupported color format');
 }
 
+/**
+ * Url checking routine - chrome url patterns
+ **/
 exports.matchUrl = function(aUrl, aPattern) {
   if (!exports.isString(aUrl) || !exports.isString(aPattern)) {
     throw new Error("Wrong arguments to 'matchUrl()'");

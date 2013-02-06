@@ -9,8 +9,9 @@
 //* class Event
 (function(me) {
 
-  function ListenerRecord(aCallback) {
+  function ListenerRecord(aEventName, aCallback) {
     this.callback = aCallback;
+    this.eventName = aEventName;
 
     this.invoke = function() {
       //We cannot use apply - doesn't work for arrays from different script engines
@@ -58,7 +59,8 @@
 
     this.addListener = function(/*callback, ...*/) {
       var record = {};
-      self.ListenerRecordConstructor.apply(record, arguments);
+      var args = [this._eventName].concat(Array.prototype.slice.call(arguments));
+      self.ListenerRecordConstructor.apply(record, args);
       var i = self._findListener(record.callback);
       if (-1 != i) {
         self._listeners[i] = record;

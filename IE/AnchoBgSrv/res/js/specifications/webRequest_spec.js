@@ -123,6 +123,11 @@ var types = [
     "id": "webRequestEventInvoke",
     "items": [
       {
+        "id": "eventName",
+        "required": true,
+        "type": "string"
+      },
+      {
         "id": "callback",
         "required": true,
         "type": "function"

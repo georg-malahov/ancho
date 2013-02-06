@@ -15,7 +15,10 @@ var preprocessArguments = require("typeChecking.js").preprocessArguments;
 var notImplemented = require("typeChecking.js").notImplemented;
 var matchUrl = require("utils.js").matchUrl;
 
-
+/**
+ * RequestFilterHandler - check if request fullfill specification of event handler
+ * aFilter : chrome.webRequest.RequestFilter
+ **/
 function RequestFilterHandler(aFilter) {
   var filterData = aFilter;
   this.filter = function(aRequestDetails) {
@@ -39,22 +42,28 @@ function RequestFilterHandler(aFilter) {
   }
 }
 
-
-function WebRequestListenerRecord(/*callback, filter, opt_extraInfoSpec*/) {
+/**
+ * WebRequestListenerRecord - webRequest specialization of event listener wrapper
+ * takes additional arguments - filter and opt_extraInfoSpec
+ **/
+function WebRequestListenerRecord(/*eventName, callback, filter, opt_extraInfoSpec*/) {
   var args = preprocessArguments('chrome.webRequest.webRequestEventInvoke', arguments, 'chrome.webRequest');
-
+  var eventName = args.eventName;
   var requestFilter = new RequestFilterHandler(args.filter);
 
   this.callback = args.callback;
   this.invoke = function(details) {
     if (!requestFilter.filter(details)) {
-      console.debug("Request filtered out " + details.url);
+      console.debug("Request event " + eventName + " was filtered out :" + details.url);
       return;
     }
     return addonAPI.callFunction(this.callback, arguments);
   }
 };
 
+/**
+ * Event object for webRequest API - derived from basic Event object
+ **/
 var WebRequestEvent = function(eventName, instanceID) {
   Event.call(this, eventName, instanceID);
 
