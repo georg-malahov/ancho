@@ -443,21 +443,15 @@
 
         default:
           // TODO:
-          // (1) error mapping to some useful strings
-          // (2) this code is not invoked in some cases, e.g. for <script> tags
-          //     with invalid "src".  so need to investigate:
-          //     (a) what errors are covered here, and
-          //     (b) how to cover the remaining ones we need.
-          data.error = 'Error ' + statusCode;
+          // this code is not invoked in some cases, e.g. for <script> tags
+          // with invalid "src".  so need to investigate:
+          // (a) what errors are covered here, and
+          // (b) how to cover the remaining ones we need.
+          var mappedError = Utils.mapHttpError(statusCode);
+          data.error = mappedError.msg;
           this.requestData.monitor.onErrorOccurred.fire([ data ]);
           break;
       }
-      /*
-      var err = Mapping.mapHttpError(statusCode);
-      var ar = this.apicaRequest;
-      ar.errorCode = err.code;
-      ar.errorMsg = err.msg;
-      */
     }
 
     return this.originalListener.onStopRequest(request, context, statusCode);

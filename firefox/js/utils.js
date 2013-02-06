@@ -2,6 +2,7 @@
   var Cc = Components.classes;
   var Ci = Components.interfaces;
   var Cu = Components.utils;
+  var Cr = Components.resutls;
 
   Cu.import('resource://gre/modules/Services.jsm');
 
@@ -94,6 +95,35 @@
     } else {
       return str;
     }
+  };
+
+  var FirefoxHttpErrors = {};
+  FirefoxHttpErrors[Cr.NS_OK] = {code: 0, msg: 'SUCCESS'};
+  FirefoxHttpErrors[Cr.NS_ERROR_UNKNOWN_HOST] = {code: 2, msg: 'UNKNOWN HOST'};
+  FirefoxHttpErrors[Cr.NS_ERROR_REDIRECT_LOOP] = {code: 3, msg: 'REDIRECT LOOP'};
+  FirefoxHttpErrors[Cr.NS_ERROR_PROXY_CONNECTION_REFUSED] = {code: 4, msg: 'PROXY REFUSED CONNECTION'};
+  FirefoxHttpErrors[Cr.NS_ERROR_UNKNOWN_PROTOCOL] = {code: 5, msg: 'UNKNOWN PROTOCOL'};
+  FirefoxHttpErrors[Cr.NS_ERROR_MALFORMED_URI] = {code: 6, msg: 'MALFORMED URI'};
+  FirefoxHttpErrors[Cr.NS_ERROR_CONNECTION_REFUSED] = {code: 7, msg: 'CONNECTION REFUSED'};
+  FirefoxHttpErrors[Cr.NS_ERROR_NET_TIMEOUT] = {code: 8, msg: 'NET TIMEOUT'};
+  FirefoxHttpErrors[Cr.NS_ERROR_OFFLINE] = {code: 9, msg: 'OFFLINE'};
+  FirefoxHttpErrors[Cr.NS_BINDING_REDIRECTED] = {code: 10, msg: 'REQUEST REDIRECTED'};
+  FirefoxHttpErrors[Cr.NS_BINDING_RETARGETED] = {code: 11, msg: 'REQUEST RETARGETED'};
+  FirefoxHttpErrors[Cr.NS_BINDING_ABORTED] = {code: 12, msg: 'REQUEST ABORTED'};
+  FirefoxHttpErrors[Cr.NS_BINDING_FAILED] = {code: 13, msg: 'REQUEST FAILED'};
+  FirefoxHttpErrors[Cr.NS_ERROR_ALREADY_CONNECTED] = {code: 14, msg: 'ALREADY CONNECTED'};
+  FirefoxHttpErrors[Cr.NS_ERROR_NOT_CONNECTED] = {code: 15, msg: 'NOT CONNECTED'};
+  FirefoxHttpErrors[Cr.NS_ERROR_IN_PROGRESS] = {code: 16, msg: 'BUSY'};
+  FirefoxHttpErrors[Cr.NS_ERROR_NO_CONTENT] = {code: 17, msg: 'NO CONTENT'};
+  FirefoxHttpErrors[Cr.NS_ERROR_PORT_ACCESS_NOT_ALLOWED] = {code: 18, msg: 'PORT ACCESS NOT ALLOWED'};
+  FirefoxHttpErrors[Cr.NS_ERROR_SOCKET_CREATE_FAILED] = {code: 19, msg: 'SOCKET CREATE FAILED'};
+  FirefoxHttpErrors[Cr.NS_ERROR_ALREADY_OPENED] = {code: 20, msg: 'ALREADY OPENED'};
+  FirefoxHttpErrors[Cr.NS_ERROR_NET_INTERRUPT] = {code: 21, msg: 'NET INTERRUPT'};
+  FirefoxHttpErrors[Cr.NS_ERROR_INVALID_CONTENT_ENCODING] = {code: 21, msg: 'INVALID CONTENT ENCODING'};
+
+  exports.mapHttpError = function(code) {
+    var res = FirefoxHttpErrors(code);
+    return res ? res : {code: 999, msg: 'UNKNOWN ERROR'};
   };
 
 }).call(this);
