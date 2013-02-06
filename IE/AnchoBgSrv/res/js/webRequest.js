@@ -10,6 +10,66 @@
 var Event = require("events.js").Event;
 var EventFactory = require("utils.js").EventFactory;
 
+require("webRequest_spec.js");
+var preprocessArguments = require("typeChecking.js").preprocessArguments;
+var notImplemented = require("typeChecking.js").notImplemented;
+var matchUrl = require("utils.js").matchUrl;
+
+/**
+ * RequestFilterHandler - check if request fullfill specification of event handler
+ * aFilter : chrome.webRequest.RequestFilter
+ **/
+function RequestFilterHandler(aFilter) {
+  var filterData = aFilter;
+  this.filter = function(aRequestDetails) {
+    passed = false;
+    for (var i = 0; !passed && i < filterData.urls.length; ++i) {
+      passed = passed || (matchUrl(aRequestDetails.url, filterData.urls[i]));
+    }
+    if (!passed) {
+      return false;
+    }
+
+    //Filter types
+    if (filterData.types) {
+      var found = false;
+      for (var i = 0; !found && i < filterData.types.length; ++i) {
+        found = found || (filterData.types[i] == aRequestDetails.type);
+      }
+      passed = passed && found;
+    }
+    return passed;
+  }
+}
+
+/**
+ * WebRequestListenerRecord - webRequest specialization of event listener wrapper
+ * takes additional arguments - filter and opt_extraInfoSpec
+ **/
+function WebRequestListenerRecord(/*eventName, callback, filter, opt_extraInfoSpec*/) {
+  var args = preprocessArguments('chrome.webRequest.webRequestEventInvoke', arguments, 'chrome.webRequest');
+  var eventName = args.eventName;
+  var requestFilter = new RequestFilterHandler(args.filter);
+
+  this.callback = args.callback;
+  this.invoke = function(details) {
+    if (!requestFilter.filter(details)) {
+      console.debug("Request event " + eventName + " was filtered out :" + details.url);
+      return;
+    }
+    return addonAPI.callFunction(this.callback, arguments);
+  }
+};
+
+/**
+ * Event object for webRequest API - derived from basic Event object
+ **/
+var WebRequestEvent = function(eventName, instanceID) {
+  Event.call(this, eventName, instanceID);
+
+  this.ListenerRecordConstructor = WebRequestListenerRecord;
+}
+
 var EVENT_LIST = ['onAuthRequired',
                   'onBeforeRedirect',
                   'onBeforeRequest',
@@ -34,13 +94,13 @@ exports.createAPI = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.webRequest.handlerBehaviorChanged
   this.handlerBehaviorChanged = function(callback) {
-    console.debug("webRequest.handlerBehaviorChanged(..) called");
+    var args = notImplemented('chrome.webRequest.handlerBehaviorChanged', arguments);
   };
 
   //============================================================================
   // events
 
-  EventFactory.createEvents(this, instanceID, API_NAME, EVENT_LIST);
+  EventFactory.createEventsEx(this, instanceID, API_NAME, EVENT_LIST, WebRequestEvent);
 
   //============================================================================
   //============================================================================

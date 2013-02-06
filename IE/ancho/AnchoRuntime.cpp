@@ -189,11 +189,12 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
   }
   CComBSTR bstrUrl;
   removeUrlFragment(pURL->bstrVal, &bstrUrl);
-  m_Frames[(BSTR) bstrUrl] = pWebBrowser;
+  m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop);
 
   // Check if this is a new tab we are creating programmatically.
   // If so redirect it to the correct URL.
   std::wstring url(pURL->bstrVal, SysStringLen(pURL->bstrVal));
+
   //TODO - use headers instead of url
   size_t first = url.find_first_of(L'#');
   size_t last = url.find_last_of(L'#');
@@ -251,7 +252,146 @@ STDMETHODIMP CAnchoRuntime::OnFrameRedirect(BSTR bstrOldUrl, BSTR bstrNewUrl)
   }
   return S_OK;
 }
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoRuntime::OnBeforeRequest(VARIANT aReporter)
+{
+  ATLASSERT(aReporter.vt == VT_UNKNOWN);
+  CComBSTR str;
+  CComQIPtr<IWebRequestReporter> reporter(aReporter.punkVal);
+  if (!reporter) {
+    return E_INVALIDARG;
+  }
+  BeforeRequestInfo outInfo;
+  CComBSTR url;
+  CComBSTR method;
+  reporter->getUrl(&url);
+  reporter->getHTTPMethod(&method);
 
+  std::wstring type = L"other";
+  FrameMap::const_iterator it = m_Frames.find(url.m_str);
+  if (it != m_Frames.end()) {
+    type = it->second.isTopLevel ? L"main_frame" : L"sub_frame";
+  }
+
+  fireOnBeforeRequest(url.m_str, method.m_str, type, outInfo);
+  if (outInfo.cancel) {
+    reporter->cancelRequest();
+  }
+  if (outInfo.redirect) {
+    reporter->redirectRequest(CComBSTR(outInfo.newUrl.c_str()));
+  }
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoRuntime::OnBeforeSendHeaders(VARIANT aReporter)
+{
+  ATLASSERT(aReporter.vt == VT_UNKNOWN);
+  CComBSTR str;
+  CComQIPtr<IWebRequestReporter> reporter(aReporter.punkVal);
+  if (!reporter) {
+    return E_INVALIDARG;
+  }
+  BeforeSendHeadersInfo outInfo;
+  CComBSTR url;
+  CComBSTR method;
+  reporter->getUrl(&url);
+  reporter->getHTTPMethod(&method);
+
+  std::wstring type = L"other";
+  FrameMap::const_iterator it = m_Frames.find(url.m_str);
+  if (it != m_Frames.end()) {
+    type = it->second.isTopLevel ? L"main_frame" : L"sub_frame";
+  }
+
+  fireOnBeforeSendHeaders(url.m_str, method.m_str, type, outInfo);
+  if (outInfo.modifyHeaders) {
+    reporter->setNewHeaders(CComBSTR(outInfo.headers.c_str()).Detach());
+  }
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+HRESULT CAnchoRuntime::fireOnBeforeRequest(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeRequestInfo &aOutInfo)
+{
+  CComPtr<ComSimpleJSObject> info;
+  IF_FAILED_RET(SimpleJSObject::createInstance(info));
+  info->setProperty(L"url", CComVariant(aUrl.c_str()));
+  info->setProperty(L"method", CComVariant(aMethod.c_str()));
+  info->setProperty(L"type", CComVariant(aType.c_str()));
+  info->setProperty(L"tabId", CComVariant(m_TabID));
+
+  CComPtr<ComSimpleJSArray> argArray;
+  IF_FAILED_RET(SimpleJSArray::createInstance(argArray));
+  argArray->push_back(CComVariant(info.p));
+
+  CComVariant result;
+  m_pAnchoService->invokeEventObjectInAllExtensions(CComBSTR(L"webRequest.onBeforeRequest"), argArray.p, &result);
+  if (result.vt & VT_ARRAY) {
+    CComSafeArray<VARIANT> arr;
+    arr.Attach(result.parray);
+    //contained data already managed by CComSafeArray
+    VARIANT tmp = {0}; HRESULT hr = result.Detach(&tmp);
+    BEGIN_TRY_BLOCK
+      for (size_t i = 0; i < arr.GetCount(); ++i) {
+        JSValue item(arr.GetAt(i));
+
+        JSValue cancel = item[L"cancel"];
+      }
+    END_TRY_BLOCK_CATCH_TO_HRESULT
+
+  }
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+HRESULT CAnchoRuntime::fireOnBeforeSendHeaders(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeSendHeadersInfo &aOutInfo)
+{
+  aOutInfo.modifyHeaders = false;
+  CComPtr<ComSimpleJSObject> info;
+  IF_FAILED_RET(SimpleJSObject::createInstance(info));
+  info->setProperty(L"url", CComVariant(aUrl.c_str()));
+  info->setProperty(L"method", CComVariant(aMethod.c_str()));
+  info->setProperty(L"type", CComVariant(aType.c_str()));
+  info->setProperty(L"tabId", CComVariant(m_TabID));
+  info->setProperty(L"requestHeaders", CComVariant());
+
+  CComPtr<ComSimpleJSArray> argArray;
+  IF_FAILED_RET(SimpleJSArray::createInstance(argArray));
+  argArray->push_back(CComVariant(info.p));
+
+  CComVariant result;
+  m_pAnchoService->invokeEventObjectInAllExtensions(CComBSTR(L"webRequest.onBeforeSendHeaders"), argArray.p, &result);
+  if (result.vt & VT_ARRAY) {
+    CComSafeArray<VARIANT> arr;
+    arr.Attach(result.parray);
+    //contained data already managed by CComSafeArray
+    VARIANT tmp = {0}; HRESULT hr = result.Detach(&tmp);
+    BEGIN_TRY_BLOCK
+      std::wostringstream oss;
+      for (size_t i = 0; i < arr.GetCount(); ++i) {
+        JSValue item(arr.GetAt(i));
+        JSValue requestHeaders = item[L"requestHeaders"];
+        if (!requestHeaders.isNull()) {
+          int headerCount = requestHeaders[L"length"].toInt();
+          for (int i = 0; i < headerCount; ++i) {
+            JSValue headerRecord = requestHeaders[i];
+            //TODO handle headerRecord[L"binaryValue"]
+            std::wstring headerText = headerRecord[L"name"].toString() + std::wstring(L": ") + headerRecord[L"value"].toString();
+            oss << headerText << L"\r\n";
+          }
+          break;//Only one listener can change headers
+        }
+      }
+      aOutInfo.modifyHeaders = true;
+      aOutInfo.headers = oss.str();
+    END_TRY_BLOCK_CATCH_TO_HRESULT
+
+  }
+
+  return S_OK;
+}
 //----------------------------------------------------------------------------
 //  InitializeContentScripting
 HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL isRefreshingMainFrame, documentLoadPhase aPhase)
@@ -268,7 +408,7 @@ HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL isR
       // Either this frame has already been removed, or the request isn't for a frame after all (e.g. an htc).
       return S_FALSE;
     }
-    webBrowser = it->second;
+    webBrowser = it->second.browser;
   }
   // Normally the frame map is cleared in the BeforeNavigate2 handler, but it isn't triggered when the
   // page is refreshed, so we need this workaround as well.

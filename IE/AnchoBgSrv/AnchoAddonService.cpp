@@ -51,6 +51,7 @@ HRESULT CAnchoAddonService::get_cookieManager(LPDISPATCH* ppRet)
 //
 HRESULT CAnchoAddonService::invokeExternalEventObject(BSTR aExtensionId, BSTR aEventName, LPDISPATCH aArgs, VARIANT* aRet)
 {
+  ENSURE_RETVAL(aRet);
   CAnchoAddonBackgroundComObject* pObject = NULL;
 
   BackgroundObjectsMap::iterator it = m_BackgroundObjects.find(std::wstring(aExtensionId, SysStringLen(aExtensionId)));
@@ -669,12 +670,11 @@ STDMETHODIMP CAnchoAddonService::createTabNotification(INT aTabID, INT aRequestI
 }
 //----------------------------------------------------------------------------
 //
-STDMETHODIMP CAnchoAddonService::invokeEventObjectInAllExtensions(BSTR aEventName, LPDISPATCH aArgs)
+STDMETHODIMP CAnchoAddonService::invokeEventObjectInAllExtensions(BSTR aEventName, LPDISPATCH aArgs, VARIANT* aRet)
 {
   for (BackgroundObjectsMap::iterator it = m_BackgroundObjects.begin(); it != m_BackgroundObjects.end(); ++it) {
-    CComVariant retVal;
     CComBSTR id(it->first.c_str());
-    invokeExternalEventObject(id, aEventName, aArgs, &retVal);
+    invokeExternalEventObject(id, aEventName, aArgs, aRet);
   }
   return S_OK;
 }
