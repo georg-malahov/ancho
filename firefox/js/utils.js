@@ -123,7 +123,7 @@
 
   exports.mapHttpError = function(code) {
     var res = FirefoxHttpErrors(code);
-    return res ? res : {code: 999, msg: 'UNKNOWN ERROR'};
+    return res ? res : {code: 999, msg: 'UNKNOWN_ERROR'};
   };
 
 }).call(this);
