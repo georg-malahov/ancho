@@ -31,10 +31,6 @@ exports.EventFactory = {
 
 //Type checking utilities - instanceof and typeof are not working well when used
 //on objects from different script dispach instances
-exports.isArray = function(aArg) {
-  return ("length" in aArg);
-  //return Object.prototype.toString.call(aArg) === '[object Array]';
-}
 
 exports.isFunction = function(aArg) {
   return Object.prototype.toString.call(aArg) === '[object Function]'
@@ -46,7 +42,7 @@ exports.isObject = function(aArg) {
 }
 
 exports.isString = function(aArg) {
-  return Object.prototype.toString.call(aArg) === '[object String]';
+  return typeof(aArg) === 'string' || Object.prototype.toString.call(aArg) === '[object String]';
 }
 
 exports.isInteger = function(aArg) {
@@ -57,6 +53,15 @@ exports.isNumber = function(aArg) {
   return (typeof (aArg) === 'number');
 }
 
+exports.isArray = function(aArg) {
+  return aArg != undefined
+    && aArg != null
+    && !exports.isString(aArg)
+    && ("length" in aArg)
+    && ("push" in aArg);
+  //return Object.prototype.toString.call(aArg) === '[object Array]';
+}
+
 exports.typeName = function(aArg) {
   if (aArg === undefined) {
     return undefined;
@@ -65,6 +70,7 @@ exports.typeName = function(aArg) {
   var typeCheckers = {
     'function': exports.isFunction,
     'number': exports.isNumber,
+    'string': exports.isString,
     'array': exports.isArray
   };
 
@@ -101,4 +107,17 @@ exports.stringColorRepresentation = function(aColor) {
     }
   }
   throw new Error('Unsupported color format');
+}
+
+exports.matchUrl = function(aUrl, aPattern) {
+  if (!exports.isString(aUrl) || !exports.isString(aPattern)) {
+    throw new Error("Wrong arguments to 'matchUrl()'");
+  }
+  if (aPattern == '<all_urls>') {
+    return true;
+  }
+  var regexp = '^' + aPattern.replace(/\*/g, '.*') + '$';
+  regexp = new RegExp(regexp);
+
+  return regexp.test(aUrl);
 }

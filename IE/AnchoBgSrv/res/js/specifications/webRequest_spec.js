@@ -16,10 +16,20 @@ var types = [
       "types": {
         "id": "types",
         "required": false,
-        "type": {
-          "items": "enumerated",
-          "type": "array"
-        }
+        "items": { /*fixed manually*/
+            "enum": [
+              "main_frame",
+              "sub_frame",
+              "stylesheet",
+              "script",
+              "image",
+              "object",
+              "xmlhttprequest",
+              "other"
+            ],
+            "type": "enumerated string"
+        },
+        "type": "array"
       },
       "urls": {
         "id": "urls",

@@ -387,7 +387,8 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
     if (!m_Doc) {
       HRESULT hr = getDocument(pSink);
       if (S_OK != hr) {
-        return hr;
+        //We need to return success - otherwise the request would be thrown away
+        return S_OK;//hr;
       }
     }
     IF_FAILED_RET(getEvents(pSink, rawUri));
