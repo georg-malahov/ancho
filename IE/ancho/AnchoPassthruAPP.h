@@ -156,13 +156,23 @@ private:
   // IInternetProtocolRoot
   STDMETHOD(Continue)(PROTOCOLDATA *pProtocolData);
 
+  STDMETHOD(StartEx)(
+		IUri *pUri,
+		IInternetProtocolSink *pOIProtSink,
+		IInternetBindInfo *pOIBindInfo,
+		DWORD grfPI,
+		HANDLE_PTR dwReserved);
 public:
   // -------------------------------------------------------------------------
   // Destructor
   CAnchoPassthruAPP() : m_DocSink(NULL), m_IsRefreshingMainFrame(false), m_ProcessedReportData(false) {}
   virtual ~CAnchoPassthruAPP();
 
+  STDMETHOD(fireOnBeforeHeaders)(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<IWebRequestReporter> aReporter);
 private:
+
+  STDMETHOD(getDocument)(CComPtr<CAnchoProtocolSink> aSink);
+  STDMETHOD(getEvents)(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl);
   // -------------------------------------------------------------------------
   // Data members
   CComQIPtr<DAnchoBrowserEvents> m_BrowserEvents;

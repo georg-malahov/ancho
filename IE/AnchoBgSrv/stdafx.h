@@ -24,6 +24,7 @@
 #include <atlfile.h>
 #include <atlcoll.h>
 #include <atltime.h>
+#include <atlsafe.h>
 
 #include <atlhost.h>
 #include <atlwin.h>
@@ -82,3 +83,5 @@ using namespace LIB_BhoHelper;
 
 #define ENSURE_RETVAL(_val) \
   if (!_val) return E_POINTER;
+
+#include <Exceptions.h>

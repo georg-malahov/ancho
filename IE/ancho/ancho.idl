@@ -44,6 +44,24 @@ library anchoLib
 
   [
 	  object,
+	  uuid(F02E92D9-7BC7-49FD-8DA9-0BAE7493FB6B),
+	  nonextensible,
+	  helpstring("IWebRequestReporter Interface"),
+	  pointer_default(unique)
+  ]
+  interface IWebRequestReporter : IUnknown
+  {
+    HRESULT init([in] BSTR aUrl, [in] BSTR aMethod);
+    HRESULT setNewHeaders([in] BSTR aNewHeaders);
+    HRESULT getNewHeaders([out] BSTR *aNewHeaders);
+    HRESULT getHTTPMethod([out] BSTR *aMethod);
+    HRESULT getUrl([out] BSTR *aUrl);
+    HRESULT redirectRequest([in] BSTR aUrl);
+    HRESULT cancelRequest();
+  };
+
+  [
+	  object,
 	  uuid(AEBCA26A-1917-11E2-845E-E50E6188709B),
 	  dual,
 	  nonextensible,
@@ -55,6 +73,8 @@ library anchoLib
     [id(1)] HRESULT OnFrameStart([in] BSTR bstrUrl, [in] VARIANT_BOOL bIsMainFrame);
     [id(2)] HRESULT OnFrameEnd([in] BSTR bstrUrl, [in] VARIANT_BOOL IsMainFrame);
     [id(3)] HRESULT OnFrameRedirect([in] BSTR bstrOldUrl, [in] BSTR bstrNewUrl);
+    [id(4)] HRESULT OnBeforeRequest([in] VARIANT aReporter);
+    [id(5)] HRESULT OnBeforeSendHeaders([in] VARIANT aReporter);
   };
 
   [

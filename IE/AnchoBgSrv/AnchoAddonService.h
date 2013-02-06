@@ -118,7 +118,7 @@ public:
   STDMETHOD(registerRuntime)(INT aFrameTab, IAnchoRuntime * aRuntime, INT *aTabID);
   STDMETHOD(unregisterRuntime)(INT aTabID);
   STDMETHOD(createTabNotification)(INT aTabID, INT aRequestID);
-  STDMETHOD(invokeEventObjectInAllExtensions)(BSTR aEventName, LPDISPATCH aArgs);
+  STDMETHOD(invokeEventObjectInAllExtensions)(BSTR aEventName, LPDISPATCH aArgs, VARIANT* aRet);
   STDMETHOD(invokeEventObjectInAllExtensionsWithIDispatchArgument)(BSTR aEventName, LPDISPATCH aArg);
 
   STDMETHOD(webBrowserReady)();
