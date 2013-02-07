@@ -2,7 +2,7 @@
   var Cc = Components.classes;
   var Ci = Components.interfaces;
   var Cu = Components.utils;
-  var Cr = Components.resutls;
+  var Cr = Components.results;
 
   Cu.import('resource://gre/modules/Services.jsm');
 
@@ -122,8 +122,8 @@
   FirefoxHttpErrors[Cr.NS_ERROR_INVALID_CONTENT_ENCODING] = {code: 21, msg: 'INVALID CONTENT ENCODING'};
 
   exports.mapHttpError = function(code) {
-    var res = FirefoxHttpErrors(code);
-    return res ? res : {code: 999, msg: 'UNKNOWN_ERROR'};
+    var res = FirefoxHttpErrors[code];
+    return res || {code: 999, msg: 'UNKNOWN_ERROR'};
   };
 
 }).call(this);
