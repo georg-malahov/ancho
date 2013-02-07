@@ -46,7 +46,7 @@
   };
 
   function GlobalId() {
-    this._id = 0;
+    this._id = 1;
   }
 
   GlobalId.prototype.getNext = function() {
@@ -59,9 +59,10 @@
     eventDispatcher: new EventDispatcher(),
     _unloaders: {},
     _globalIds: {},
+    _tabIds: [],
 
     registerUnloader: function(win, unloader) {
-      var windowId = Utils.getWindowId(win);
+      var windowId = getWindowId(win);
       if (!(windowId in this._unloaders)) {
         this._unloaders[windowId] = [];
       }
@@ -70,7 +71,7 @@
     },
 
     unloadWindow: function(win) {
-      var windowId = Utils.getWindowId(win);
+      var windowId = getWindowId(win);
       if (windowId in this._unloaders) {
         this._unloadWindowId(windowId);
       }
@@ -100,7 +101,16 @@
     startSingletonAPIs: function(window) {
       this.backgroundWindow = window;
       new WebRequestSingleton(this, window);
+    },
+
+    registerTab: function(tabId) {
+      this._tabIds.push(tabId);
+    },
+
+    tabIds: function() {
+      return this._tabIds.slice(0);
     }
+
   };
 
   module.exports = ExtensionState;

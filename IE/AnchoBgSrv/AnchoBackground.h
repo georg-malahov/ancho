@@ -86,7 +86,8 @@ public:
   // IAnchoAddonBackground methods. See .idl for description.
   STDMETHOD(AdviseInstance)(ULONG * pulInstanceID);
   STDMETHOD(UnadviseInstance)(ULONG ulInstanceID);
-  STDMETHOD(GetContentAPI)(ULONG ulInstanceID, LPDISPATCH* ppDisp);
+  STDMETHOD(GetContentInfo)(ULONG ulInstanceID, BSTR bstrUrl, LPDISPATCH* ppDisp);
+  STDMETHOD(ReleaseContentInfo)(ULONG ulInstanceID);
   STDMETHOD(GetManifest)(LPDISPATCH* ppDisp);
 
   // -------------------------------------------------------------------------

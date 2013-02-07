@@ -9,8 +9,6 @@
 #include "dllmain.h"
 #include "ProtocolHandlerRegistrar.h"
 
-extern class CanchoModule _AtlModule;
-
 /*============================================================================
  * class CAnchoAddon
  */
@@ -32,6 +30,17 @@ STDMETHODIMP CAnchoAddon::Init(LPCOLESTR lpsExtensionID, IAnchoAddonService * pS
   if (ERROR_SUCCESS != res)
   {
     return HRESULT_FROM_WIN32(res);
+  }
+
+  // load flags to see if the addon is disabled
+  DWORD flags = 0;
+  res = regKey.QueryDWORDValue(s_AnchoExtensionsRegistryEntryFlags, flags);
+  // to stay compatible with older versions we treat "no flags at all" as "enabled"
+  if ( (ERROR_SUCCESS == res) && !(flags & ENABLED))
+  {
+    // ... means: only when flag is present AND ENABLED is not set
+    // the addon is disabled
+    return E_ABORT;
   }
 
   // get addon GUID
@@ -99,8 +108,7 @@ STDMETHODIMP CAnchoAddon::Init(LPCOLESTR lpsExtensionID, IAnchoAddonService * pS
 STDMETHODIMP CAnchoAddon::Shutdown()
 {
   // this method must be safe to be called multiple times
-  CleanupContentScripting();
-  m_pContentInfo.Release();
+  cleanupScripting();
   m_pBackgroundConsole.Release();
   m_Magpie.Release();
 
@@ -137,15 +145,21 @@ STDMETHODIMP CAnchoAddon::executeScriptFile(BSTR aFile)
 
 //----------------------------------------------------------------------------
 //  CleanupContentScripting
-void CAnchoAddon::CleanupContentScripting()
+void CAnchoAddon::cleanupScripting()
 {
   if (m_Magpie) {
     m_Magpie->Shutdown();
   }
-  DOMWindowWrapper::ComObject * p = m_wrappedWindow.Detach();
-  if (p) {
-    p->forceDelete();
-    p = NULL;
+  if (m_wrappedWindow) {
+    m_wrappedWindow->cleanup();
+  }
+  m_wrappedWindow.Release();
+
+  if (m_pAddonBackground && m_InstanceID) {
+    m_pAddonBackground->ReleaseContentInfo(m_InstanceID);
+  }
+  if (m_pContentInfo) {
+    m_pContentInfo.Release();
   }
 }
 
@@ -153,24 +167,7 @@ void CAnchoAddon::CleanupContentScripting()
 //  InitializeContentScripting
 STDMETHODIMP CAnchoAddon::InitializeContentScripting(IWebBrowser2* pBrowser, BSTR bstrUrl, documentLoadPhase aPhase)
 {
-  //If create AddonBackground sooner - background script will be executed before initialization of tab windows
-  if(!m_pAddonBackground || !m_pBackgroundConsole) {
-    IF_FAILED_RET(m_pAnchoService->GetAddonBackground(CComBSTR(m_sExtensionName), &m_pAddonBackground));
-
-    // get console
-    m_pBackgroundConsole = m_pAddonBackground;
-    ATLASSERT(m_pBackgroundConsole);
-  }
-  if(!m_pContentInfo) {
-    // tell background we are there and get instance id
-    m_pAddonBackground->AdviseInstance(&m_InstanceID);
-
-     //TODO - should be executed as soon as possible
-    m_pAnchoService->webBrowserReady();
-
-    // get content our API
-    m_pAddonBackground->GetContentAPI(m_InstanceID, &m_pContentInfo);
-  }
+  IF_FAILED_RET(initializeEnvironment());
 
   // content script handling happens here
 
@@ -184,12 +181,10 @@ STDMETHODIMP CAnchoAddon::InitializeContentScripting(IWebBrowser2* pBrowser, BST
     return S_OK;
   }
 
-  if (!m_pContentInfo) {
-    return S_OK;
-  }
+  cleanupScripting();
 
-  // (re)initialize magpie for this page
-  CleanupContentScripting();
+  // get content our API
+  IF_FAILED_RET(m_pAddonBackground->GetContentInfo(m_InstanceID, bstrUrl, &m_pContentInfo));
 
   CString s;
   s.Format(_T("Ancho content [%s] [%i]"), m_sExtensionName, m_InstanceID);
@@ -205,10 +200,17 @@ STDMETHODIMP CAnchoAddon::InitializeContentScripting(IWebBrowser2* pBrowser, BST
   CIDispatchHelper contentInfo(m_pContentInfo);
   CComVariant jsObj;
   IF_FAILED_RET((contentInfo.Get<CComVariant, VT_DISPATCH, IDispatch*>(L"api", jsObj)));
-
   IF_FAILED_RET(DOMWindowWrapper::createInstance(pWebBrowser, m_wrappedWindow))
   m_Magpie->AddNamedItem(L"chrome", jsObj.pdispVal, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_CODEONLY);
   m_Magpie->AddNamedItem(L"window", m_wrappedWindow, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_GLOBALMEMBERS);
+
+  CIDispatchHelper window = m_wrappedWindow;
+  CComPtr<IDispatchEx> pRequest;
+  IF_FAILED_RET(pRequest.CoCreateInstance(__uuidof(AnchoXmlHttpRequest)));
+
+  IF_FAILED_RET(window.SetProperty((LPOLESTR)L"XMLHttpRequest", CComVariant(pRequest.p)));
+  m_Magpie->AddNamedItem(L"XMLHttpRequest", pRequest, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_CODEONLY);
+
 
   // get the name(s) of content scripts from manifest and run them in order
   IF_FAILED_RET((contentInfo.Get<CComVariant, VT_DISPATCH, IDispatch*>(L"scripts", jsObj)));
@@ -221,6 +223,51 @@ STDMETHODIMP CAnchoAddon::InitializeContentScripting(IWebBrowser2* pBrowser, BST
     if( it->vt == VT_BSTR ) {
       m_Magpie->ExecuteGlobal(it->bstrVal);
     }
+  }
+
+  return S_OK;
+}
+
+//----------------------------------------------------------------------------
+//  InitializeExtensionScripting
+STDMETHODIMP CAnchoAddon::InitializeExtensionScripting(BSTR bstrUrl)
+{
+  IF_FAILED_RET(initializeEnvironment());
+
+  cleanupScripting();
+
+  // get content our API
+  IF_FAILED_RET(m_pAddonBackground->GetContentInfo(m_InstanceID, bstrUrl, &m_pContentInfo));
+
+  CIDispatchHelper contentInfo(m_pContentInfo);
+  CComVariant api;
+  IF_FAILED_RET((contentInfo.Get<CComVariant, VT_DISPATCH, IDispatch*>(L"api", api)));
+
+  CIDispatchHelper script = CIDispatchHelper::GetScriptDispatch(m_pWebBrowser);
+  IF_FAILED_RET(script.SetPropertyByRef(L"chrome", api));
+  CComVariant console;
+  IF_FAILED_RET((contentInfo.Get<CComVariant, VT_DISPATCH, IDispatch*>(L"console", console)));
+  IF_FAILED_RET(script.SetPropertyByRef(L"console", console));
+
+  return S_OK;
+}
+
+HRESULT CAnchoAddon::initializeEnvironment()
+{
+  //If create AddonBackground sooner - background script will be executed before initialization of tab windows
+  if(!m_pAddonBackground || !m_pBackgroundConsole) {
+    IF_FAILED_RET(m_pAnchoService->GetAddonBackground(CComBSTR(m_sExtensionName), &m_pAddonBackground));
+
+    // get console
+    m_pBackgroundConsole = m_pAddonBackground;
+    ATLASSERT(m_pBackgroundConsole);
+  }
+  if(!m_InstanceID) {
+    // tell background we are there and get instance id
+    m_pAddonBackground->AdviseInstance(&m_InstanceID);
+
+     //TODO - should be executed as soon as possible
+    m_pAnchoService->webBrowserReady();
   }
 
   return S_OK;

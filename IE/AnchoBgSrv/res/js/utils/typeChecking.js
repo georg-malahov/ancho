@@ -130,6 +130,17 @@ var ValidatorManager = function() {
 
   //---------------------------------------
   //  Initialize manager by basic validators
+  this.addValidator('any', function() {
+    this.validate = function(aArg) {
+      if (aArg === null || aArg === undefined) {
+        var e = "Specified object is not \'null\'";
+        return createValidationReportError(e, validationError.INVALID_VALUE);
+      } else {
+        return createValidationReportSuccess();
+      }
+    }
+  });
+
   this.addValidator('number', function() {
     this.validate = function(aArg) {
       return simpleTypeValidation('number', aArg);
@@ -429,6 +440,7 @@ var preprocessArguments = function(aMethodName, aArguments) {
   if (report.success) {
     return report.processedArguments;
   }
+  console.error(report.error);
   throw new Error(report.error);
 }
 exports.preprocessArguments = preprocessArguments;
@@ -436,10 +448,12 @@ exports.preprocessArguments = preprocessArguments;
 //Used in methods which are not implemented yet - it throws an exception,
 //but also checks passed arguments - so caller atleast knows that he didn't make a mistake.
 exports.notImplemented = function(aMethodName, aArguments) {
+  var message = 'Function \'' + aMethodName + '\' not yet implemented. Arguments were OK.';
   try {
     preprocessArguments(aMethodName, aArguments);
   } catch (e) {
-    throw new Error('Function \'' + aMethodName + '\' not yet implemented. Also problem with arguments : ' + e.message);
+    message = 'Function \'' + aMethodName + '\' not yet implemented. Also problem with arguments : ' + (e.message || e.description);
   }
-  throw new Error('Function \'' + aMethodName + '\' not yet implemented. Arguments were OK.');
+  console.error(message);
+  throw new Error(message);
 }

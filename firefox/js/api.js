@@ -12,10 +12,12 @@
   var CookiesAPI = require('./cookies');
   var HistoryAPI = require('./history');
   var DebuggerAPI = require('./debugger');
+  var StorageAPI = require('./storage');
 
   // Ancho APIs
   var ToolbarAPI = require('./toolbar');
   var ClipboardAPI = require('./clipboard');
+  var ExternalAPI = require('./external');
 
   // System APIs
   var ConsoleAPI = require('./console');
@@ -31,12 +33,18 @@
       // browserAction: new BrowserActionAPI(extensionState, contentWindow),
       cookies: new CookiesAPI(extensionState, contentWindow),
       history: new HistoryAPI(extensionState, contentWindow),
-      debugger: new DebuggerAPI(extensionState, contentWindow)
+      debugger: new DebuggerAPI(extensionState, contentWindow),
+      storage: {
+        // FIXME TODO: conflicting prefix when more Ancho extensions are installed
+        local: new StorageAPI(extensionState, contentWindow, 'local'),
+        sync: new StorageAPI(extensionState, contentWindow, 'sync')
+      }
     };
 
     this.ancho = {
       toolbar: new ToolbarAPI(extensionState, contentWindow),
-      clipboard: new ClipboardAPI(extensionState, contentWindow)
+      clipboard: new ClipboardAPI(extensionState, contentWindow),
+      external: new ExternalAPI(extensionState, contentWindow)
     };
 
     this.console = new ConsoleAPI(extensionState, contentWindow);

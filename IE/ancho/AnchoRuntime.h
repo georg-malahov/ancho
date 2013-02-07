@@ -33,7 +33,7 @@ class ATL_NO_VTABLE CAnchoRuntime :
 public:
   // -------------------------------------------------------------------------
   // ctor
-  CAnchoRuntime() : m_WebBrowserEventsCookie(0), m_AnchoBrowserEventsCookie(0)
+  CAnchoRuntime() : m_WebBrowserEventsCookie(0), m_AnchoBrowserEventsCookie(0), m_ExtensionPageAPIPrepared(false), m_IsExtensionPage(false)
   {
   }
 
@@ -54,7 +54,9 @@ public:
   // COM sink map
   BEGIN_SINK_MAP(CAnchoRuntime)
     SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_BEFORENAVIGATE2, OnBrowserBeforeNavigate2)
-    SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_NEWWINDOW3, OnNewWindow3)
+    SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_NAVIGATECOMPLETE2, OnNavigateComplete)
+    SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_PROGRESSCHANGE, OnBrowserProgressChange)
+    SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_DOWNLOADBEGIN, OnBrowserDownloadBegin)
     SINK_ENTRY_EX(2, IID_DAnchoBrowserEvents, 1, OnFrameStart)
     SINK_ENTRY_EX(2, IID_DAnchoBrowserEvents, 2, OnFrameEnd)
     SINK_ENTRY_EX(2, IID_DAnchoBrowserEvents, 3, OnFrameRedirect)
@@ -87,10 +89,12 @@ public:
   STDMETHOD(fillTabInfo)(VARIANT* aInfo);
 
   // DWebBrowserEvents2 methods
+  STDMETHOD_(void, OnNavigateComplete)(LPDISPATCH pDispatch, VARIANT *URL);
   STDMETHOD_(void, OnBrowserBeforeNavigate2)(LPDISPATCH pDisp, VARIANT *pURL, VARIANT *Flags,
     VARIANT *TargetFrameName, VARIANT *PostData, VARIANT *Headers, BOOL *Cancel);
 
-  STDMETHOD_(void, OnNewWindow3)(IDispatch *pDisp, VARIANT_BOOL Cancel, DWORD dwFlags,	BSTR bstrUrlContext, BSTR bstrUrl);
+  STDMETHOD_(void, OnBrowserDownloadBegin)();
+  STDMETHOD_(void, OnBrowserProgressChange)(LONG Progress, LONG ProgressMax);
 
   // -------------------------------------------------------------------------
   // DAnchoBrowserEvents methods.
@@ -105,7 +109,8 @@ private:
   void DestroyAddons();
   HRESULT Init();
   HRESULT Cleanup();
-  HRESULT InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL bIsMainFrame, documentLoadPhase aPhase);
+  HRESULT InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL bIsRefreshingMainFrame, documentLoadPhase aPhase);
+  HRESULT InitializeExtensionScripting(BSTR bstrUrl);
 
   HWND getTabWindow();
   HWND getFrameTabWindow()
@@ -126,9 +131,10 @@ private:
   CComPtr<DAnchoBrowserEvents>            m_pBrowserEventSource;
   DWORD                                   m_WebBrowserEventsCookie;
   DWORD                                   m_AnchoBrowserEventsCookie;
-  CComPtr<IClassFactory>                  m_CFHTTP;
-  CComPtr<IClassFactory>                  m_CFHTTPS;
   FrameMap                                m_Frames;
+
+  bool                                    m_ExtensionPageAPIPrepared;
+  bool                                    m_IsExtensionPage;
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(AnchoRuntime), CAnchoRuntime)

@@ -14,6 +14,8 @@ class CPopupWindow :
   public PopupWebBrowserEvents
 {
 public:
+  static const unsigned defaultWidth = 2;
+  static const unsigned defaultHeight = 2;
   DECLARE_FRAME_WND_CLASS(NULL, IDR_MAINFRAME)
 
   virtual void OnFinalMessage(HWND);
@@ -25,7 +27,7 @@ public:
   END_COM_MAP()
 
   BEGIN_SINK_MAP(CPopupWindow)
-    SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_DOCUMENTCOMPLETE, OnDocumentComplete)
+    SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_PROGRESSCHANGE, OnBrowserProgressChange)
   END_SINK_MAP()
 
   BEGIN_MSG_MAP(CPopupWindow)
@@ -43,13 +45,18 @@ public:
   LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
   LRESULT OnActivate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
-  STDMETHOD_(void, OnDocumentComplete)(LPDISPATCH aDispatch, VARIANT *aURL);
+  STDMETHOD_(void, OnBrowserProgressChange)(LONG Progress, LONG ProgressMax);
 
+  void checkResize();
 private:
+  CComPtr<IHTMLElement> getBodyElement();
+
   CComQIPtr<IWebBrowser2>   m_pWebBrowser;     // Embedded WebBrowserControl
   DispatchMap m_InjectedObjects;
   CStringW    m_sURL;
   DWORD       m_WebBrowserEventsCookie;
   CIDispatchHelper m_CloseCallback;
+
+  CComVariant mEventHandler;
 };
 

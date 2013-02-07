@@ -288,6 +288,10 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath=".\XmlHttpRequest.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -352,6 +356,10 @@
 			</File>
 			<File
 				RelativePath=".\targetver.h"
+				>
+			</File>
+			<File
+				RelativePath=".\XmlHttpRequest.h"
 				>
 			</File>
 		</Filter>
@@ -453,6 +461,10 @@
 			>
 		</File>
 		<File
+			RelativePath=".\res\js\specifications\extension_spec.js"
+			>
+		</File>
+		<File
 			RelativePath=".\res\js\fileBrowserHandler.js"
 			>
 		</File>
@@ -462,6 +474,10 @@
 		</File>
 		<File
 			RelativePath=".\res\js\i18n.js"
+			>
+		</File>
+		<File
+			RelativePath=".\res\js\specifications\i18n_spec.js"
 			>
 		</File>
 		<File

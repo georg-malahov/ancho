@@ -25,6 +25,13 @@ class ATL_NO_VTABLE CAnchoAddon :
   public IAnchoAddon
 {
 public:
+  // enum for registry flags
+  enum {
+    NONE    = 0x00000000,
+    ENABLED = 0x00000001,
+    MASK    = 0x00000001  // masks all valid flags
+  };
+
   // -------------------------------------------------------------------------
   // ctor
   CAnchoAddon() : m_InstanceID(0)
@@ -61,6 +68,7 @@ public:
   STDMETHOD(Init)(LPCOLESTR lpsExtensionID, IAnchoAddonService * pService,
     IWebBrowser2 * pWebBrowser);
   STDMETHOD(InitializeContentScripting)(IWebBrowser2* pBrowser, BSTR bstrUrl, documentLoadPhase aPhase);
+  STDMETHOD(InitializeExtensionScripting)(BSTR bstrUrl);
   STDMETHOD(Shutdown)();
 
   STDMETHOD(executeScriptCode)(BSTR aCode);
@@ -69,7 +77,8 @@ public:
 private:
   // -------------------------------------------------------------------------
   // Private functions.
-  void CleanupContentScripting();
+  HRESULT initializeEnvironment();
+  void cleanupScripting();
 
   // -------------------------------------------------------------------------
   // Private members.

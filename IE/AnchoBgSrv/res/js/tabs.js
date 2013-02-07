@@ -49,7 +49,11 @@ var removeCallbackWrapper = function(aTabs, aCallback) {
 var Tabs = function(instanceID) {
   //============================================================================
   // private variables
-
+  var _instanceID = instanceID;
+  var _currentWindowID = 0;
+  if (instanceID < 0) {
+    _currentWindowID = serviceAPI.getCurrentWindowId();
+  }
   //============================================================================
   // public properties
 
@@ -109,7 +113,7 @@ var Tabs = function(instanceID) {
     var args = preprocessArguments('chrome.tabs.connect', arguments);
 
     var name = (args['connectInfo'] != undefined) ? args['connectInfo'].name : undefined;
-    var pair = new PortPair(name, new MessageSender());
+    var pair = new PortPair(name, new MessageSender(_instanceID));
     addPortPair(pair, _instanceID);
     addonAPI.invokeEventObject(
               'extension.onConnect',
@@ -219,7 +223,7 @@ var Tabs = function(instanceID) {
       if (aQueryInfo.windowId) {
         var winId = aQueryInfo.windowId;
         if (windows.WINDOW_ID_CURRENT == winId) {
-          winId = serviceAPI.getCurrentWindowId();
+          winId = _currentWindowID || serviceAPI.getCurrentWindowId();
         }
         retVal = retVal && (aTab.windowId == winId);
       }
@@ -272,20 +276,22 @@ var Tabs = function(instanceID) {
   this.sendMessage = function(tabId, message, responseCallback) {
     var args = preprocessArguments('chrome.tabs.sendMessage', arguments);
 
-    sender = new MessageSender();
+    sender = new MessageSender(_instanceID);
     callback = undefined;
     ret = undefined;
     if (responseCallback) {
-      callbackWrapper = new CallbackWrapper(args['responseCallback']);
+      var callbackWrapper = new CallbackWrapper(args.responseCallback);
       callback = callbackWrapper.callback;
     }
     ret = addonAPI.invokeEventObject(
             'extension.onMessage',
-            args['tabId'],
+            args.tabId,
             false, //we are selecting tab with tabId
-            [message, sender, callback]
+            [args.message, sender, callback]
             ); //TODO: fill MessageSender
-
+    if (callbackWrapper === undefined) {
+      return;
+    }
 
     //if responseCallback not yet called, check if some of the listeners
     //requests asynchronous responseCallback, otherwise disable responseCallback

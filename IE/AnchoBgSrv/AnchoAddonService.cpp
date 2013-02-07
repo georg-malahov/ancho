@@ -12,8 +12,6 @@
 
 #include "PopupWindow.h"
 
-EXTERN_C IMAGE_DOS_HEADER __ImageBase;
-
 struct CookieNotificationCallback: public ACookieCallbackFunctor
 {
   CookieNotificationCallback(CAnchoAddonService &aService): service(aService)
@@ -94,10 +92,9 @@ HRESULT CAnchoAddonService::getActiveWebBrowser(LPUNKNOWN* pUnkWebBrowser)
 HRESULT CAnchoAddonService::createTab(LPDISPATCH aProperties, LPDISPATCH aCreator, LPDISPATCH aCallback)
 {
   try {
-    m_WebBrowserPostInitTasks.addCommnad(AQueuedCommand::Ptr(new CreateTabCommand(*this, aProperties, aCreator, aCallback)));
-  } catch (std::exception &e) {
-    ATLTRACE("Error: %s\n", e.what());
-    return E_FAIL;
+    m_WebBrowserPostInitTasks.addCommand(AQueuedCommand::Ptr(new CreateTabCommand(*this, aProperties, aCreator, aCallback)));
+  } catch (std::exception &) {
+    return exceptionToHRESULT();
   }
   return S_OK;
 }
@@ -260,30 +257,23 @@ STDMETHODIMP CAnchoAddonService::getBrowserActions(VARIANT* aBrowserActionsArray
 
   return constructSafeArrayFromVector(m_BrowserActionInfos, *aBrowserActionsArray);
 }
-
-STDMETHODIMP CAnchoAddonService::setBrowserActionUpdateCallback(LPDISPATCH aBrowserActionUpdateCallback)
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoAddonService::setBrowserActionUpdateCallback(INT aTabId, LPDISPATCH aBrowserActionUpdateCallback)
 {
-  m_BrowserActionCallbacks.push_back(CIDispatchHelper(aBrowserActionUpdateCallback));
+  m_BrowserActionCallbacks[aTabId] = CIDispatchHelper(aBrowserActionUpdateCallback);
   return S_OK;
 }
-
+//----------------------------------------------------------------------------
+//
 STDMETHODIMP CAnchoAddonService::browserActionNotification()
 {
-  for (size_t i = 0; i < m_BrowserActionCallbacks.size(); ++i) {
-    m_BrowserActionCallbacks[i].Invoke0(DISPID(0));
+  for (BrowserActionCallbackMap::iterator it = m_BrowserActionCallbacks.begin(); it != m_BrowserActionCallbacks.end(); ++it) {
+    it->second.Invoke0(DISPID(0));
   }
   return S_OK;
 }
-/*HRESULT CAnchoAddonService::get_browserActionInfos(VARIANT* aBrowserActionInfos)
-{
-  ENSURE_RETVAL(aBrowserActionInfos);
-  if (!mBrowserActionInfos) {
-    aBrowserActionInfos->vt = VT_EMPTY;
-    return S_OK;
-  }
-  aBrowserActionInfos->vt = VT_DISPATCH;
-  return mBrowserActionInfos.QueryInterface<IDispatch>(&(aBrowserActionInfos->pdispVal));
-}*/
+
 //----------------------------------------------------------------------------
 //
 HRESULT CAnchoAddonService::addBrowserActionInfo(LPDISPATCH aBrowserActionInfo)
@@ -307,7 +297,17 @@ HRESULT CAnchoAddonService::executeScriptInTab(BSTR aExtensionID, INT aTabID, BS
 }
 //----------------------------------------------------------------------------
 //
-
+int CAnchoAddonService::getFrameTabID(int aFrameTab)
+{
+  FrameTabToTabIDMap::iterator it = m_FrameTabIds.find(aFrameTab);
+  if (it != m_FrameTabIds.end()) {
+    return it->second;
+  }
+  m_FrameTabIds[aFrameTab] = m_NextTabID++;
+  return m_FrameTabIds[aFrameTab];
+}
+//----------------------------------------------------------------------------
+//
 void CAnchoAddonService::fillWindowInfo(HWND aWndHandle, CIDispatchHelper &aInfo)
 {
   //BOOL isVisible = IsWindowVisible(aWndHandle);
@@ -400,11 +400,11 @@ STDMETHODIMP CAnchoAddonService::updateWindow(INT aWindowId, LPDISPATCH aPropert
   int left = winInfo.rcWindow.left;
   int width = winInfo.rcWindow.right - winInfo.rcWindow.left;
   int height = winInfo.rcWindow.bottom - winInfo.rcWindow.top;
-  if ( SUCCEEDED((properties.Get<int, VT_I4>(L"top", top)))
-    || SUCCEEDED((properties.Get<int, VT_I4>(L"left", left)))
-    || SUCCEEDED((properties.Get<int, VT_I4>(L"width", width)))
-    || SUCCEEDED((properties.Get<int, VT_I4>(L"height", height)))
-  ) {
+  bool shouldMove = SUCCEEDED((properties.Get<int, VT_I4>(L"top", top)));
+  shouldMove = SUCCEEDED((properties.Get<int, VT_I4>(L"left", left))) || shouldMove;
+  shouldMove = SUCCEEDED((properties.Get<int, VT_I4>(L"width", width))) || shouldMove;
+  shouldMove = SUCCEEDED((properties.Get<int, VT_I4>(L"height", height))) || shouldMove;
+  if (shouldMove) {
     ::MoveWindow(hwnd, left, top, width, height, TRUE);
   }
   bool focused = false;
@@ -444,7 +444,7 @@ STDMETHODIMP CAnchoAddonService::createWindow(LPDISPATCH aProperties, LPDISPATCH
   CIDispatchHelper properties(aProperties);
 
   try {
-    m_WebBrowserPostInitTasks.addCommnad(AQueuedCommand::Ptr(new CreateWindowCommand(*this, aProperties, aCreator, aCallback)));
+    m_WebBrowserPostInitTasks.addCommand(AQueuedCommand::Ptr(new CreateWindowCommand(*this, aProperties, aCreator, aCallback)));
   } catch (std::exception &e) {
     ATLTRACE("Error: %s\n", e.what());
     return E_FAIL;
@@ -485,7 +485,7 @@ STDMETHODIMP CAnchoAddonService::createPopupWindow(BSTR aUrl, INT aX, INT aY, LP
   IDispatch* api;
   IF_FAILED_RET((injectedData.Get<IDispatch*, VT_DISPATCH>((LPOLESTR)s_AnchoBackgroundPageAPIName, api)));
   injectedDataMap[s_AnchoBackgroundPageAPIName] = api;
-  
+
   IDispatch* console;
   IF_FAILED_RET((injectedData.Get<IDispatch*, VT_DISPATCH>((LPOLESTR)s_AnchoBackgroundConsoleObjectName, console)));
   injectedDataMap[s_AnchoBackgroundConsoleObjectName] = console;
@@ -621,11 +621,14 @@ STDMETHODIMP CAnchoAddonService::GetModulePath(BSTR * pbsPath)
 }
 //----------------------------------------------------------------------------
 //
-STDMETHODIMP CAnchoAddonService::registerRuntime(IAnchoRuntime * aRuntime, INT *aTabID)
+STDMETHODIMP CAnchoAddonService::registerRuntime(INT aFrameTab, IAnchoRuntime * aRuntime, INT *aTabID)
 {
+  if (aFrameTab == 0) {
+    return E_FAIL;
+  }
   ENSURE_RETVAL(aTabID);
-  //Assigning tab id
-  *aTabID = m_NextTabID++;
+
+  *aTabID = getFrameTabID(aFrameTab);
 
   m_Runtimes[*aTabID] = RuntimeRecord(aRuntime);
   ATLTRACE(L"ADDON SERVICE - registering tab: %d\n", *aTabID);
@@ -688,22 +691,31 @@ STDMETHODIMP CAnchoAddonService::invokeEventObjectInAllExtensionsWithIDispatchAr
 //
 STDMETHODIMP CAnchoAddonService::webBrowserReady()
 {
-  m_WebBrowserPostInitTasks.setAutoExec(true);
+  m_WebBrowserPostInitTasks.autoExecuteAll();
   return S_OK;
 }
 
 //----------------------------------------------------------------------------
 //
-STDMETHODIMP CAnchoAddonService::registerBrowserActionToolbar(BSTR * aUrl)
+STDMETHODIMP CAnchoAddonService::registerBrowserActionToolbar(INT aFrameTab, BSTR * aUrl, INT*aTabId)
 {
   ENSURE_RETVAL(aUrl);
 
-  WCHAR   dllPath[MAX_PATH] = {0};
-  GetModuleFileNameW((HINSTANCE)&__ImageBase, dllPath, _countof(dllPath));
+  *aTabId = getFrameTabID(aFrameTab);
+
+  WCHAR   appPath[MAX_PATH] = {0};
+  GetModuleFileNameW(NULL, appPath, _countof(appPath));
 
   CString url;
-  url.Format(L"res://%s/BROWSER_ACTION_TOOLBAR.HTML", dllPath);// (L"H:\\programming\\git\\ancho\\IE\\test-toolbar.html");
+  url.Format(L"res://%s/BROWSER_ACTION_TOOLBAR.HTML", appPath);
   *aUrl = url.AllocSysString();
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoAddonService::unregisterBrowserActionToolbar(INT aTabId)
+{
+  m_BrowserActionCallbacks.erase(aTabId);
   return S_OK;
 }
 //----------------------------------------------------------------------------

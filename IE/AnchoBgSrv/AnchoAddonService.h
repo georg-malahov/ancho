@@ -12,7 +12,7 @@
 #include "AnchoBgSrvModule.h"
 #include "IECookieManager.h"
 #include "CommandQueue.h"
-
+#include "XmlHttpRequest.h"
 
 #if defined(_WIN32_WCE) && !defined(_CE_DCOM) && !defined(_CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA)
 #error "Single-threaded COM objects are not properly supported on Windows CE platform, such as the Windows Mobile platforms that do not include full DCOM support. Define _CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA to force ATL to support creating single-thread COM object's and allow use of it's single-threaded COM object implementations. The threading model in your rgs file was set to 'Free' as that is the only threading model supported in non DCOM Windows CE platforms."
@@ -102,18 +102,20 @@ public:
   //STDMETHOD(get_browserActionInfos)(VARIANT* aBrowserActionInfos);
   STDMETHOD(getBrowserActions)(VARIANT* aBrowserActionsArray);
   STDMETHOD(addBrowserActionInfo)(LPDISPATCH aBrowserActionInfo);
-  STDMETHOD(setBrowserActionUpdateCallback)(LPDISPATCH aBrowserActionUpdateCallback);
+  STDMETHOD(setBrowserActionUpdateCallback)(INT aTabId, LPDISPATCH aBrowserActionUpdateCallback);
   STDMETHOD(browserActionNotification)();
-  STDMETHOD(testFunction())
+
+  STDMETHOD(testFunction(IDispatch** ppVal))
   {
-    ATLTRACE(L"TEST FUNCTION -----------------\n");
+    //ATLTRACE(L"TEST FUNCTION -----------------\n");
+
     return S_OK;
   }
   // -------------------------------------------------------------------------
   // IAnchoAddonService methods. See .idl for description.
   STDMETHOD(GetAddonBackground)(BSTR bsID, IAnchoAddonBackground ** ppRet);
   STDMETHOD(GetModulePath)(BSTR * pbsPath);
-  STDMETHOD(registerRuntime)(IAnchoRuntime * aRuntime, INT *aTabID);
+  STDMETHOD(registerRuntime)(INT aFrameTab, IAnchoRuntime * aRuntime, INT *aTabID);
   STDMETHOD(unregisterRuntime)(INT aTabID);
   STDMETHOD(createTabNotification)(INT aTabID, INT aRequestID);
   STDMETHOD(invokeEventObjectInAllExtensions)(BSTR aEventName, LPDISPATCH aArgs);
@@ -121,9 +123,12 @@ public:
 
   STDMETHOD(webBrowserReady)();
 
-  STDMETHOD(registerBrowserActionToolbar)(BSTR * aUrl);
+  STDMETHOD(registerBrowserActionToolbar)(INT aFrameTab, BSTR * aUrl, INT*aTabId);
+  STDMETHOD(unregisterBrowserActionToolbar)(INT aTabId);
   STDMETHOD(getDispatchObject)(IDispatch **aRet);
 private:
+  int getFrameTabID(int aFrameTab);
+
   void fillWindowInfo(HWND aWndHandle, CIDispatchHelper &aInfo);
   HWND getCurrentWindowHWND();
   bool isIEWindow(HWND);
@@ -138,7 +143,12 @@ private:
   class ATabCreatedCallback: public ACommand
   {
   public:
-    typedef CComPtr<ATabCreatedCallback> Ptr;
+#if _HAS_CPP0X
+  typedef std::shared_ptr<ATabCreatedCallback> Ptr;
+#else
+  typedef std::tr1::shared_ptr<ATabCreatedCallback> Ptr;
+#endif
+
     void operator()(INT aTabID)
     { execute(aTabID); }
     virtual void execute(INT aTabID) = 0;
@@ -181,6 +191,8 @@ private:
   // -------------------------------------------------------------------------
   // Private members.
 
+  typedef std::map<int, int> FrameTabToTabIDMap;
+
   // a map containing all addon background objects - one per addon
   typedef std::map<std::wstring, CAnchoAddonBackgroundComObject*> BackgroundObjectsMap;
   BackgroundObjectsMap  m_BackgroundObjects;
@@ -198,10 +210,11 @@ private:
 
   CommandQueue m_WebBrowserPostInitTasks;
 
-  typedef std::vector<CIDispatchHelper> CallbackVector;
-  //CComPtr<IDispatch> mBrowserActionInfos;
+  FrameTabToTabIDMap m_FrameTabIds;
+
+  typedef std::map<int, CIDispatchHelper> BrowserActionCallbackMap;
   VariantVector m_BrowserActionInfos;
-  CallbackVector m_BrowserActionCallbacks;
+  BrowserActionCallbackMap m_BrowserActionCallbacks;
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(AnchoAddonService), CAnchoAddonService)

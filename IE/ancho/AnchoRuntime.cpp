@@ -7,8 +7,6 @@
 #include "stdafx.h"
 #include <map>
 
-#include "ProtocolCF.h"
-
 #include "AnchoRuntime.h"
 #include "AnchoAddon.h"
 #include "AnchoBrowserEvents.h"
@@ -19,11 +17,6 @@
 
 #include <Iepmapi.h>
 #pragma comment(lib, "Iepmapi.lib")
-
-extern class CanchoModule _AtlModule;
-
-typedef PassthroughAPP::CMetaFactory<PassthroughAPP::CComClassFactoryProtocol,
-  CAnchoPassthruAPP> MetaFactory;
 
 /*============================================================================
  * class CAnchoRuntime
@@ -124,7 +117,7 @@ HRESULT CAnchoRuntime::Init()
   IF_FAILED_RET(m_pAnchoService.CoCreateInstance(CLSID_AnchoAddonService));
 
   // Registering tab in service - obtains tab id and assigns it to the tab as property
-  IF_FAILED_RET(m_pAnchoService->registerRuntime(this, &m_TabID));
+  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, &m_TabID));
   HWND hwnd;
   m_pWebBrowser->get_HWND((long*)&hwnd);
   ::SetProp(hwnd, s_AnchoTabIDPropertyName, (HANDLE)m_TabID);
@@ -144,6 +137,41 @@ HRESULT CAnchoRuntime::Init()
 }
 
 //----------------------------------------------------------------------------
+//
+STDMETHODIMP_(void) CAnchoRuntime::OnBrowserDownloadBegin()
+{
+  m_ExtensionPageAPIPrepared = false;
+}
+
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP_(void) CAnchoRuntime::OnBrowserProgressChange(LONG Progress, LONG ProgressMax)
+{
+  if (m_IsExtensionPage && !m_ExtensionPageAPIPrepared && m_pWebBrowser) {
+    READYSTATE readyState;
+    m_pWebBrowser->get_ReadyState(&readyState);
+    if (readyState == READYSTATE_INTERACTIVE) {
+      CComBSTR url;
+      m_pWebBrowser->get_LocationURL(&url);
+      InitializeExtensionScripting(url);
+      m_ExtensionPageAPIPrepared = true;
+    }
+  }
+}
+
+//----------------------------------------------------------------------------
+//  OnNavigateComplete
+STDMETHODIMP_(void) CAnchoRuntime::OnNavigateComplete(LPDISPATCH pDispatch, VARIANT *URL)
+{
+  CComBSTR url(URL->bstrVal);
+  if (isExtensionPage(std::wstring(url))) {
+    m_IsExtensionPage = true;
+    InitializeExtensionScripting(url);
+    m_ExtensionPageAPIPrepared = true;
+  }
+}
+
+//----------------------------------------------------------------------------
 //  OnBrowserBeforeNavigate2
 STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VARIANT *pURL, VARIANT *Flags,
   VARIANT *TargetFrameName, VARIANT *PostData, VARIANT *Headers, BOOL *Cancel)
@@ -152,13 +180,16 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
   ATLASSERT(pURL->vt == VT_BSTR && pURL->bstrVal != NULL);
   CComQIPtr<IWebBrowser2> pWebBrowser(pDisp);
   ATLASSERT(pWebBrowser != NULL);
+  VARIANT_BOOL isTop;
+  if (SUCCEEDED(pWebBrowser->get_TopLevelContainer(&isTop))) {
+    if (isTop) {
+      // Loading the main frame so reset the frame list.
+      m_Frames.clear();
+    }
+  }
   CComBSTR bstrUrl;
   removeUrlFragment(pURL->bstrVal, &bstrUrl);
   m_Frames[(BSTR) bstrUrl] = pWebBrowser;
-
-  // Store the URL being loaded (used by the protocol sink).
-  HRESULT hr = m_pWebBrowser->PutProperty(L"_anchoLoadingURL", *pURL);
-  ATLASSERT(SUCCEEDED(hr));
 
   // Check if this is a new tab we are creating programmatically.
   // If so redirect it to the correct URL.
@@ -184,15 +215,14 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
   m_pAnchoService->createTabNotification(m_TabID, requestID);
 }
 
-STDMETHODIMP_(void) CAnchoRuntime::OnNewWindow3(IDispatch *pDisp, VARIANT_BOOL Cancel, DWORD dwFlags,	BSTR bstrUrlContext, BSTR bstrUrl)
-{
-  ATLTRACE(L"OnNewWindow3-------------------\n");
-}
-
 //----------------------------------------------------------------------------
 //  OnFrameStart
 STDMETHODIMP CAnchoRuntime::OnFrameStart(BSTR bstrUrl, VARIANT_BOOL bIsMainFrame)
 {
+  //For extension pages we don't execute content scripts
+  if (isExtensionPage(std::wstring(bstrUrl))) {
+    return S_OK;
+  }
   return InitializeContentScripting(bstrUrl, bIsMainFrame, documentLoadStart);
 }
 
@@ -200,6 +230,10 @@ STDMETHODIMP CAnchoRuntime::OnFrameStart(BSTR bstrUrl, VARIANT_BOOL bIsMainFrame
 //  OnFrameEnd
 STDMETHODIMP CAnchoRuntime::OnFrameEnd(BSTR bstrUrl, VARIANT_BOOL bIsMainFrame)
 {
+  //For extension pages we don't execute content scripts
+  if (isExtensionPage(std::wstring(bstrUrl))) {
+    return S_OK;
+  }
   return InitializeContentScripting(bstrUrl, bIsMainFrame, documentLoadEnd);
 }
 
@@ -220,10 +254,10 @@ STDMETHODIMP CAnchoRuntime::OnFrameRedirect(BSTR bstrOldUrl, BSTR bstrNewUrl)
 
 //----------------------------------------------------------------------------
 //  InitializeContentScripting
-HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL bIsMainFrame, documentLoadPhase aPhase)
+HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL isRefreshingMainFrame, documentLoadPhase aPhase)
 {
   CComPtr<IWebBrowser2> webBrowser;
-  if (bIsMainFrame) {
+  if (isRefreshingMainFrame) {
     webBrowser = m_pWebBrowser;
   }
   else {
@@ -231,15 +265,14 @@ HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL bIs
     removeUrlFragment(bstrUrl, &url);
     FrameMap::iterator it = m_Frames.find((BSTR) url);
     if (it == m_Frames.end()) {
-      ATLASSERT(documentLoadEnd == aPhase);
-      // Assume we have removed this frame while waiting for the document to complete.
+      // Either this frame has already been removed, or the request isn't for a frame after all (e.g. an htc).
       return S_FALSE;
     }
     webBrowser = it->second;
   }
-  // We have to check whether we are the main web browser since the event source can't
-  // always tell us if we are the main frame.
-  if ((bIsMainFrame || webBrowser == m_pWebBrowser) && (documentLoadStart == aPhase)) {
+  // Normally the frame map is cleared in the BeforeNavigate2 handler, but it isn't triggered when the
+  // page is refreshed, so we need this workaround as well.
+  if (isRefreshingMainFrame && (documentLoadStart == aPhase)) {
     m_Frames.clear();
   }
   AddonMap::iterator it = m_Addons.begin();
@@ -250,20 +283,22 @@ HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL bIs
 
   return S_OK;
 }
+//----------------------------------------------------------------------------
+//
+HRESULT CAnchoRuntime::InitializeExtensionScripting(BSTR bstrUrl)
+{
+  std::wstring domain = getDomainName(bstrUrl);
+  AddonMap::iterator it = m_Addons.find(domain);
+  if (it != m_Addons.end()) {
+    return it->second->InitializeExtensionScripting(bstrUrl);
+  }
+  return S_OK;
+}
 
 //----------------------------------------------------------------------------
 //  SetSite
 STDMETHODIMP CAnchoRuntime::SetSite(IUnknown *pUnkSite)
 {
-  CComPtr<IInternetSession> pInternetSession;
-  IF_FAILED_RET(CoInternetGetSession(0, &pInternetSession, 0));
-
-  IF_FAILED_RET(MetaFactory::CreateInstance(CLSID_HttpProtocol, &m_CFHTTP));
-  IF_FAILED_RET(pInternetSession->RegisterNameSpace(m_CFHTTP, CLSID_NULL, L"http", 0, 0, 0));
-
-  IF_FAILED_RET(MetaFactory::CreateInstance(CLSID_HttpSProtocol, &m_CFHTTPS));
-  IF_FAILED_RET(pInternetSession->RegisterNameSpace(m_CFHTTPS, CLSID_NULL, L"https", 0, 0, 0));
-
   HRESULT hr = IObjectWithSiteImpl<CAnchoRuntime>::SetSite(pUnkSite);
   IF_FAILED_RET(hr);
   if (pUnkSite)
