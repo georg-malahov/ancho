@@ -211,7 +211,7 @@ function createPopup(aX, aY, aPopup) {
 }
 
 
-
+//Called from api.js - uses data provided from manifest
 exports.initBrowserAction = function(browserActionData) {
   var debugString = "browserAction.initAPI(..) called.";
 

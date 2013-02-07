@@ -27,7 +27,6 @@ set(${PROJECT_NAME}_HEADERS
   "${${PROJECT_NAME}_INC_DIR}/HtmlPanelUIHandler.h"
   "${${PROJECT_NAME}_INC_DIR}/HtmlToolbarWindow.h"
   "${${PROJECT_NAME}_INC_DIR}/resource.h"
-  "${${PROJECT_NAME}_INC_DIR}/SimpleWrappers.h"
   "${${PROJECT_NAME}_INC_DIR}/stdafx.h"
   "${${PROJECT_NAME}_INC_DIR}/targetver.h"
   "${${PROJECT_NAME}_INC_DIR}/Toolbar.h"

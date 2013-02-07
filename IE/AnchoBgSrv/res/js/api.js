@@ -59,14 +59,14 @@ var CONTENT_API_NAMES = [
 
 function getChromeAPISubset(chrome, aInstanceID, aAPINames) {
   for (var i = 0; i < aAPINames.length; ++i) {
-    console.debug("Creating chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
+    //console.debug("Creating chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
     chrome[aAPINames[i]] = require(aAPINames[i] + ".js").createAPI(aInstanceID);
   }
 }
 
 function releaseAPISubsetByName(aInstanceID, aAPINames) {
   for (var i = 0; i < aAPINames.length; ++i) {
-    console.debug("Releasing chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
+    //console.debug("Releasing chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
     require(aAPINames[i] + ".js").releaseAPI(aInstanceID);
   }
 }
@@ -74,8 +74,12 @@ function releaseAPISubsetByName(aInstanceID, aAPINames) {
 function releaseAPISubset(aInstanceID, aAPIInstance) {
   for (var i in aAPIInstance) {
     try {
-      console.debug("Releasing chrome." + i + " API instance n. " + aInstanceID);
-      require(i + ".js").releaseAPI(aInstanceID);
+      //TODO - when console will be available in content scripts stop
+      //its injection in chrome api and remove this temporary test
+      if (i != 'console') {
+        console.debug("Releasing chrome." + i + " API instance n. " + aInstanceID);
+        require(i + ".js").releaseAPI(aInstanceID);
+      }
     } catch (e) {
       console.error("Releasing of chrome." + i + " API instance n. " + aInstanceID + " failed! " + e.description);
     }
