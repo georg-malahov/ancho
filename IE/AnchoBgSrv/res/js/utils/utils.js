@@ -66,7 +66,7 @@ exports.isArray = function(aArg) {
     && !exports.isString(aArg)
     && ("length" in aArg)
     && ("push" in aArg);
-  //return Object.prototype.toString.call(aArg) === '[object Array]';
+  //This is not usable for array like objects: return Object.prototype.toString.call(aArg) === '[object Array]';
 }
 
 exports.typeName = function(aArg) {

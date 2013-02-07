@@ -311,18 +311,6 @@ STDMETHODIMP CAnchoPassthruAPP::getDocument(CComPtr<CAnchoProtocolSink> aSink)
   if (!m_Doc) {
     CComPtr<IWindowForBindingUI> windowForBindingUI;
     HRESULT hr = S_OK;
-/*
-	CComPtr<IServiceProvider> spClientProvider;
-	if (!spClientProvider)
-	{
-    CComPtr<IInternetProtocolSink> sink = aSink;
-    hr = sink->QueryInterface(&spClientProvider);
-		ATLASSERT(SUCCEEDED(hr) && spClientProvider != 0);
-	}
-	if (SUCCEEDED(hr))
-	{
-		hr = spClientProvider->QueryService<IWindowForBindingUI>(IID_IWindowForBindingUI, &windowForBindingUI);
-	}*/
 
     aSink->QueryServiceFromClient(IID_IWindowForBindingUI, &windowForBindingUI);
     if (!windowForBindingUI) {
@@ -339,11 +327,6 @@ STDMETHODIMP CAnchoPassthruAPP::getDocument(CComPtr<CAnchoProtocolSink> aSink)
 
     hr = getHTMLDocumentForHWND(hwnd, &m_Doc);
     if (FAILED(hr)) {
-      // Not ready to get the window yet so we'll try again with the next notification.
-      //if (data->dwState == ANCHO_SWITCH_REDIRECT) {
-        // Remember the redirect so we can trigger the corresponding event later.
-        //m_Redirects.push_back(std::make_pair(bstrUrl, bstrAdditional));
-      //}
       return S_FALSE;
     }
   }

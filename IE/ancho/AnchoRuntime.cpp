@@ -334,10 +334,20 @@ HRESULT CAnchoRuntime::fireOnBeforeRequest(const std::wstring &aUrl, const std::
     //contained data already managed by CComSafeArray
     VARIANT tmp = {0}; HRESULT hr = result.Detach(&tmp);
     BEGIN_TRY_BLOCK
+      aOutInfo.cancel = false;
       for (size_t i = 0; i < arr.GetCount(); ++i) {
         JSValue item(arr.GetAt(i));
 
         JSValue cancel = item[L"cancel"];
+        if (!cancel.isNull()) {
+          aOutInfo.cancel = aOutInfo.cancel || cancel;
+        }
+
+        JSValue redirectUrl = item[L"redirectUrl"];
+        if (!redirectUrl.isNull()) {
+          aOutInfo.redirect = true;
+          aOutInfo.newUrl = redirectUrl.toString();
+        }
       }
     END_TRY_BLOCK_CATCH_TO_HRESULT
 
@@ -369,11 +379,11 @@ HRESULT CAnchoRuntime::fireOnBeforeSendHeaders(const std::wstring &aUrl, const s
     //contained data already managed by CComSafeArray
     VARIANT tmp = {0}; HRESULT hr = result.Detach(&tmp);
     BEGIN_TRY_BLOCK
-      std::wostringstream oss;
       for (size_t i = 0; i < arr.GetCount(); ++i) {
         JSValue item(arr.GetAt(i));
         JSValue requestHeaders = item[L"requestHeaders"];
         if (!requestHeaders.isNull()) {
+          std::wostringstream oss;
           int headerCount = requestHeaders[L"length"].toInt();
           for (int i = 0; i < headerCount; ++i) {
             JSValue headerRecord = requestHeaders[i];
@@ -381,11 +391,10 @@ HRESULT CAnchoRuntime::fireOnBeforeSendHeaders(const std::wstring &aUrl, const s
             std::wstring headerText = headerRecord[L"name"].toString() + std::wstring(L": ") + headerRecord[L"value"].toString();
             oss << headerText << L"\r\n";
           }
-          break;//Only one listener can change headers
+          aOutInfo.modifyHeaders = true;
+          aOutInfo.headers = oss.str();
         }
       }
-      aOutInfo.modifyHeaders = true;
-      aOutInfo.headers = oss.str();
     END_TRY_BLOCK_CATCH_TO_HRESULT
 
   }
