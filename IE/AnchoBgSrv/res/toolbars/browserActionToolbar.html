@@ -38,43 +38,43 @@
   }
   function buttonOnMouseOut(aElement) {
     aElement.style.border = 'none';
-	}
-	function buttonOnMouseDown(aElement) {
+  }
+  function buttonOnMouseDown(aElement) {
     aElement.style.border = '#000000 solid 1px';
-	}
+  }
 
-	var mouseEventsString = 'onclick="browserActions[this.id].onClick(event.screenX, event.screenY+15, browserTabID)" onmousedown="buttonOnMouseDown(this)" onmouseup="buttonOnMouseOver(this)" onmouseover="buttonOnMouseOver(this)" onmouseout="buttonOnMouseOut(this)" ';
+  var mouseEventsString = 'onclick="browserActions[this.id].onClick(event.screenX, event.screenY+15, browserTabID)" onmousedown="buttonOnMouseDown(this)" onmouseup="buttonOnMouseOver(this)" onmouseover="buttonOnMouseOver(this)" onmouseout="buttonOnMouseOut(this)" ';
 
   //if possible use tab specific properties
-	function mergeTabSpecifics(aGlobal, aTabSpecific) {
-	  var info = {};
-	  for (var attrname in aGlobal) {
-	    info[attrname] = aGlobal[attrname];
-	  }
-	  if (aTabSpecific) {
-	    for (var attrname in aTabSpecific) {
-	      info[attrname] = aTabSpecific[attrname];
-	    }
-	  }
-	  return info;
-	}
+  function mergeTabSpecifics(aGlobal, aTabSpecific) {
+    var info = {};
+    for (var attrname in aGlobal) {
+      info[attrname] = aGlobal[attrname];
+    }
+    if (aTabSpecific) {
+      for (var attrname in aTabSpecific) {
+        info[attrname] = aTabSpecific[attrname];
+      }
+    }
+    return info;
+  }
 
 
-	function getButtonCode(aId) {
-	  var info = mergeTabSpecifics(browserActions[aId].globalInfo, browserActions[aId].tabSpecificInfo[browserTabID]);
+  function getButtonCode(aId) {
+    var info = mergeTabSpecifics(browserActions[aId].globalInfo, browserActions[aId].tabSpecificInfo[browserTabID]);
 
-		var str = '<div class="baButton" id=\"' + aId  + '\" ' ;
-		if (info.title) {
-		  str += 'title=' + '\"' + info.title + '\"';
-	  }
-	  if (info.enabled) {
-	    str += mouseEventsString;
-	  }
-	  if (info.icon) {
-	    str += 'style="background-image: url(' + info.icon + ')" ';
-		}
-		str += '>';
-		if (info.badge) {
+    var str = '<div class="baButton" id=\"' + aId  + '\" ' ;
+    if (info.title) {
+      str += 'title=' + '\"' + info.title + '\"';
+    }
+    if (info.enabled) {
+      str += mouseEventsString;
+    }
+    if (info.icon) {
+      str += 'style="background-image: url(' + info.icon + ')" ';
+    }
+    str += '>';
+    if (info.badge) {
       str += '<div class="baBadge"'
       if (info.badgeBackgroundColor) {
         str += 'style="background-color:"' + info.badgeBackgroundColor + '" ';
@@ -88,30 +88,30 @@
 
   var browserActions = {};
 
-	function updateBrowserActions() {
-		var buttonsCode = '';
-		for (var i in browserActions) {
-			buttonsCode += getButtonCode(browserActions[i].id);
-		}
-		var buttonBar = document.getElementById('buttonBar');
+  function updateBrowserActions() {
+    var buttonsCode = '';
+    for (var i in browserActions) {
+      buttonsCode += getButtonCode(browserActions[i].id);
+    }
+    var buttonBar = document.getElementById('buttonBar');
     if (!buttonBar) {
       throw new Error('Couldn\'t locate buttonBar.');
-		}
-		buttonBar.innerHTML = buttonsCode;
-	}
+    }
+    buttonBar.innerHTML = buttonsCode;
+  }
 
-	function initBrowserActions() {
-	  var browserActionsArray = []
-	  var safeArray = external.getBrowserActions();
-	  if (safeArray == null) {
-	    return;
-	  }
-	  browserActionsArray = (new VBArray(safeArray)).toArray();
+  function initBrowserActions() {
+    var browserActionsArray = []
+    var safeArray = external.getBrowserActions();
+    if (safeArray == null) {
+      return;
+    }
+    browserActionsArray = (new VBArray(safeArray)).toArray();
     var actions = {};
     for (var i = 0; i < browserActionsArray.length; ++i) {
-			actions[browserActionsArray[i].id] = browserActionsArray[i];
-		}
-		browserActions = actions;
+      actions[browserActionsArray[i].id] = browserActionsArray[i];
+    }
+    browserActions = actions;
     updateBrowserActions();
   }
   var callbackID = undefined;

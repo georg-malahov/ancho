@@ -49,7 +49,7 @@
             results.push(ret);
           }
         } catch (e) {
-          console.error("Listener for " + self._eventName + " event have thrown an exception: " + e.description);
+          console.error("Listener for " + self._eventName + " event has thrown an exception: " + e.description);
         }
       }
       if (results.length > 0) {

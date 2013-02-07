@@ -16,7 +16,7 @@ var notImplemented = require("typeChecking.js").notImplemented;
 var matchUrl = require("utils.js").matchUrl;
 
 /**
- * RequestFilterHandler - check if request fullfill specification of event handler
+ * RequestFilterHandler - check if request fulfills specification of event handler
  * aFilter : chrome.webRequest.RequestFilter
  **/
 function RequestFilterHandler(aFilter) {
@@ -24,7 +24,7 @@ function RequestFilterHandler(aFilter) {
   this.filter = function(aRequestDetails) {
     passed = false;
     for (var i = 0; !passed && i < filterData.urls.length; ++i) {
-      passed = passed || (matchUrl(aRequestDetails.url, filterData.urls[i]));
+      passed = (matchUrl(aRequestDetails.url, filterData.urls[i]));
     }
     if (!passed) {
       return false;
@@ -32,13 +32,21 @@ function RequestFilterHandler(aFilter) {
 
     //Filter types
     if (filterData.types) {
-      var found = false;
-      for (var i = 0; !found && i < filterData.types.length; ++i) {
-        found = found || (filterData.types[i] == aRequestDetails.type);
+      passed = false;
+      for (var i = 0; !passed && i < filterData.types.length; ++i) {
+        passed = (filterData.types[i] == aRequestDetails.type);
       }
-      passed = passed && found;
+      if (!passed) {
+        return false;
+      }
     }
-    return passed;
+
+    if (filterData.tabId && aRequestDetails.tabId != filterData.tabId) {
+      return false;
+    }
+
+    //TODO - filter by windowId - not provided in request details
+    return true;
   }
 }
 

@@ -81,7 +81,6 @@ var ValidatorManager = function() {
       throw new Error('Unspecified validator name!');
     }
     if (utils.isString(aSpec)) {
-      //console.log("getting validator for " + aSpec);
       var validatorConstructor = this._getValidatorConstructor(aSpec, aNamespace);
       if (!validatorConstructor) {
         throw new Error('Unavailable validator :' + aSpec);
@@ -116,7 +115,7 @@ var ValidatorManager = function() {
     validators[aValidatorName] = aValidator;
   }
 
-
+  //This method adds composite validator which is binded with its specification
   this.addSpecValidatorWrapper = function(aName, aSpecification) {
     if (!aName || !utils.isString(aName)) {
       throw new Error('Wrong validator name!');
