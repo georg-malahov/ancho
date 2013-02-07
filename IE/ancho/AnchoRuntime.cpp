@@ -340,7 +340,7 @@ HRESULT CAnchoRuntime::fireOnBeforeRequest(const std::wstring &aUrl, const std::
 
         JSValue cancel = item[L"cancel"];
         if (!cancel.isNull()) {
-          aOutInfo.cancel = aOutInfo.cancel || cancel;
+          aOutInfo.cancel = aOutInfo.cancel || cancel.toBool();
         }
 
         JSValue redirectUrl = item[L"redirectUrl"];
