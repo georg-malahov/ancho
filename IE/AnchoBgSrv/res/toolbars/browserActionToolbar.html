@@ -12,36 +12,39 @@
     .baButton {
       height: 21px;
       width: 21px;
-      background-color:#0000FF20;
+      background-color: transparent;
       background-repeat: no-repeat;
       background-position:center;
+      border : solid 1px transparent;
       margin: 3px;
       text-align: right;
       float: left;
     }
     .baBadge {
-      height: 9px;
-      font-family: Arial, sans-serif;
-      font-size: xx-small;
+      height: 11px;
+      font-family: Arial;
+      font-size: x-small;
       font-style: normal;
       font-weight: bold;
-      color: #000000;
+      color: #FFFFFF;
       overflow: hidden;
       position: relative;
-      background-color: #FFFFFF;
-      top: 12px;
+      background-color: #000000;
+      display: inline;
+      top: 10px;
     }
   </style>
   <script>
   function buttonOnMouseOver(aElement) {
-    aElement.style.border = '#CCCCCC solid 1px';
+    aElement.style.border = 'solid 1px #CCCCCC';
   }
+
   function buttonOnMouseOut(aElement) {
-    aElement.style.border = 'none';
-  }
-  function buttonOnMouseDown(aElement) {
-    aElement.style.border = '#000000 solid 1px';
-  }
+    aElement.style.border = 'solid 1px transparent';
+	}
+	function buttonOnMouseDown(aElement) {
+	  aElement.style.border = 'solid 1px #000000';
+	}
 
   var mouseEventsString = 'onclick="browserActions[this.id].onClick(event.screenX, event.screenY+15, browserTabID)" onmousedown="buttonOnMouseDown(this)" onmouseup="buttonOnMouseOver(this)" onmouseover="buttonOnMouseOver(this)" onmouseout="buttonOnMouseOut(this)" ';
 
@@ -77,7 +80,7 @@
     if (info.badge) {
       str += '<div class="baBadge"'
       if (info.badgeBackgroundColor) {
-        str += 'style="background-color:"' + info.badgeBackgroundColor + '" ';
+        str += 'style="background-color:' + info.badgeBackgroundColor + '" ';
       }
       str += '>' + info.badge + '</div>';
     }
@@ -100,13 +103,13 @@
     buttonBar.innerHTML = buttonsCode;
   }
 
-  function initBrowserActions() {
-    var browserActionsArray = []
-    var safeArray = external.getBrowserActions();
-    if (safeArray == null) {
-      return;
-    }
-    browserActionsArray = (new VBArray(safeArray)).toArray();
+	function initBrowserActions() {
+	  var browserActionsArray = external.getBrowserActions();
+
+	  if (!browserActionsArray) {
+	    alert("Failed browserAction toolbar setup.");
+	    return;
+	  }
     var actions = {};
     for (var i = 0; i < browserActionsArray.length; ++i) {
       actions[browserActionsArray[i].id] = browserActionsArray[i];

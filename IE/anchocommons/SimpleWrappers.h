@@ -319,7 +319,7 @@ protected:
   CComVariant mCurrentValue;
 };
 
-void swap(JSValue &aVal1, JSValue &aVal2)
+inline void swap(JSValue &aVal1, JSValue &aVal2)
 {
   std::swap(aVal1.mCurrentValue, aVal2.mCurrentValue);
 }

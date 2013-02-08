@@ -256,7 +256,8 @@ STDMETHODIMP CAnchoAddonService::getBrowserActions(VARIANT* aBrowserActionsArray
 {
   ENSURE_RETVAL(aBrowserActionsArray);
 
-  return constructSafeArrayFromVector(m_BrowserActionInfos, *aBrowserActionsArray);
+  CComVariant tmp(m_BrowserActionInfos.p);
+  return tmp.Detach(aBrowserActionsArray);
 }
 //----------------------------------------------------------------------------
 //
@@ -282,7 +283,7 @@ HRESULT CAnchoAddonService::addBrowserActionInfo(LPDISPATCH aBrowserActionInfo)
   if (!aBrowserActionInfo) {
     return E_POINTER;
   }
-  m_BrowserActionInfos.push_back(CComVariant(aBrowserActionInfo));
+  m_BrowserActionInfos->push_back(CComVariant(aBrowserActionInfo));
   return S_OK;
 }
 
@@ -552,6 +553,8 @@ HRESULT CAnchoAddonService::FinalConstruct()
   pCookiesManager->startWatching();
 
   m_Cookies = pCookiesManager;
+
+  IF_FAILED_RET(SimpleJSArray::createInstance(m_BrowserActionInfos));
   return S_OK;
 }
 

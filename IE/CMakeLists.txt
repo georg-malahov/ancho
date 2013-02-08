@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 project (AnchoFramework)
 
+add_definitions(-DUNICODE -D_UNICODE)
 
 add_subdirectory(libbhohelper)
 include_directories(${libbhohelper_INC_DIR})
