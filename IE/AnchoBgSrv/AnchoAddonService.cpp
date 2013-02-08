@@ -256,7 +256,6 @@ STDMETHODIMP CAnchoAddonService::getBrowserActions(VARIANT* aBrowserActionsArray
 {
   ENSURE_RETVAL(aBrowserActionsArray);
 
-  //IF_FAILED_RET(constructSafeArrayFromVector(m_BrowserActionInfos, *aBrowserActionsArray));
   CComVariant tmp(m_BrowserActionInfos.p);
   return tmp.Detach(aBrowserActionsArray);
 }

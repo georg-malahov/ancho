@@ -215,7 +215,6 @@ private:
 
   typedef std::map<int, CIDispatchHelper> BrowserActionCallbackMap;
   CComPtr<ComSimpleJSArray> m_BrowserActionInfos;
-  //VariantVector m_BrowserActionInfos;
   BrowserActionCallbackMap m_BrowserActionCallbacks;
 };
 
