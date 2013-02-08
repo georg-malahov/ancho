@@ -166,8 +166,9 @@ STDMETHODIMP_(void) CAnchoRuntime::OnNavigateComplete(LPDISPATCH pDispatch, VARI
   CComBSTR url(URL->bstrVal);
   if (isExtensionPage(std::wstring(url))) {
     m_IsExtensionPage = true;
-    InitializeExtensionScripting(url);
-    m_ExtensionPageAPIPrepared = true;
+    if (SUCCEEDED(InitializeExtensionScripting(url))) {
+      m_ExtensionPageAPIPrepared = true;
+    }
   }
 }
 
