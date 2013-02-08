@@ -162,6 +162,13 @@ public:
     return S_OK;
   }
 
+  STDMETHOD(shouldCancel)(BOOL *aCancel)
+  {
+    ENSURE_RETVAL(aCancel);
+    *aCancel = mCancel ? TRUE : FALSE;
+    return S_OK;
+  }
+
 public:
   bool mCancel;
   bool mRedirect;
