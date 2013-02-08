@@ -194,7 +194,9 @@ HRESULT CAnchoAddonService::updateTab(INT aTabId, LPDISPATCH aProperties)
 //
 HRESULT CAnchoAddonService::getTabInfo(INT aTabId, LPDISPATCH aCreator, VARIANT* aRet)
 {
-  HRESULT hr = createIDispatchFromCreator(aCreator, aRet);
+  ENSURE_RETVAL(aRet);
+  CComVariant result;
+  HRESULT hr = createIDispatchFromCreator(aCreator, &result);
   if (hr != S_OK) {
     return hr;
   }
@@ -202,10 +204,14 @@ HRESULT CAnchoAddonService::getTabInfo(INT aTabId, LPDISPATCH aCreator, VARIANT*
   RuntimeMap::iterator it = m_Runtimes.find(aTabId);
   if (it != m_Runtimes.end()) {
     ATLASSERT(it->second.runtime);
-    return it->second.runtime->fillTabInfo(aRet);
+    hr = it->second.runtime->fillTabInfo(&result);
+    if (hr == S_OK) {
+      VariantCopy(aRet, &result);
+    }
+  } else {
+    VariantClear(aRet);
   }
-  aRet->vt = VT_EMPTY;
-  return S_OK;
+  return hr;
 }
 
 //----------------------------------------------------------------------------

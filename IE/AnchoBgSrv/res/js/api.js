@@ -57,7 +57,7 @@ var CONTENT_API_NAMES = [
     "i18n"];
 
 
-function getChromeAPISubset(chrome, aInstanceID, aAPINames) {
+function createChromeAPISubset(chrome, aInstanceID, aAPINames) {
   for (var i = 0; i < aAPINames.length; ++i) {
     //console.debug("Creating chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
     chrome[aAPINames[i]] = require(aAPINames[i] + ".js").createAPI(aInstanceID);
@@ -87,8 +87,8 @@ function releaseAPISubset(aInstanceID, aAPIInstance) {
 }
 
 // create and initialize the background API
-function getFullAPI(chrome, aInstanceID) {
-  getChromeAPISubset(chrome, aInstanceID, API_NAMES);
+function createFullAPI(chrome, aInstanceID) {
+  createChromeAPISubset(chrome, aInstanceID, API_NAMES);
 }
 
 function releaseFullAPIInstance(aInstanceID) {
@@ -96,14 +96,14 @@ function releaseFullAPIInstance(aInstanceID) {
 }
 
 function fullAPI(aInstanceID) {
-  getChromeAPISubset(this, aInstanceID, API_NAMES);
+  createChromeAPISubset(this, aInstanceID, API_NAMES);
   this.console = console;// TODO: remove
   console.debug("Full API created: [" + aInstanceID + "]");
 }
 
 // exports.chrome will be available to background pages as 'chrome'.
 // This name is defined in anchocommons/strings.cpp
-getFullAPI(exports.chrome, 0);
+createFullAPI(exports.chrome, 0);
 exports.console = console;
 
 //***************************************************
@@ -127,7 +127,7 @@ exports.reserveFullAPIInstanceID = function() {
 
 exports.createFullAPI = function(aInstanceID) {
   var chromeAPI = {};
-  getFullAPI(chromeAPI, aInstanceID);
+  createFullAPI(chromeAPI, aInstanceID);
   fullAPIInstances[aInstanceID] = chromeAPI;
   return chromeAPI;
 };
@@ -155,7 +155,7 @@ var contentInstances = {};
 // the content API gets composed here. Decide which methods and objects should
 // be part of the content API.
 function restrictedAPI(aInstanceID) {
-  getChromeAPISubset(this, aInstanceID, CONTENT_API_NAMES);
+  createChromeAPISubset(this, aInstanceID, CONTENT_API_NAMES);
   this.console = console;// TODO: remove
   console.debug("Restricted API created: [" + aInstanceID + "]");
 }
