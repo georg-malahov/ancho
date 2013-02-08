@@ -293,12 +293,12 @@ STDMETHODIMP CAnchoPassthruAPP::fireOnBeforeHeaders(CComPtr<CAnchoProtocolSink> 
 {
   if (!m_BrowserEvents) {
     if (!m_Doc) {
-      HRESULT hr = getDocument(aSink);
+      HRESULT hr = getDocumentFromSink(aSink, m_Doc);
       if (S_OK != hr) {
         return hr;
       }
     }
-    IF_FAILED_RET(getEvents(aSink, aUrl));
+    IF_FAILED_RET(getEventsFromSink(aSink, aUrl, m_BrowserEvents));
   }
   if (m_BrowserEvents) {
     m_BrowserEvents->OnBeforeSendHeaders(CComVariant(aReporter.p));
@@ -306,7 +306,7 @@ STDMETHODIMP CAnchoPassthruAPP::fireOnBeforeHeaders(CComPtr<CAnchoProtocolSink> 
   return S_OK;
 }
 
-STDMETHODIMP CAnchoPassthruAPP::getDocument(CComPtr<CAnchoProtocolSink> aSink)
+STDMETHODIMP CAnchoPassthruAPP::getDocumentFromSink(CComPtr<CAnchoProtocolSink> aSink, CComPtr<IHTMLDocument2> &aDoc)
 {
   if (!m_Doc) {
     CComPtr<IWindowForBindingUI> windowForBindingUI;
@@ -325,7 +325,7 @@ STDMETHODIMP CAnchoPassthruAPP::getDocument(CComPtr<CAnchoProtocolSink> aSink)
       }
     }
 
-    hr = getHTMLDocumentForHWND(hwnd, &m_Doc);
+    hr = getHTMLDocumentForHWND(hwnd, &aDoc);
     if (FAILED(hr)) {
       return S_FALSE;
     }
@@ -333,7 +333,7 @@ STDMETHODIMP CAnchoPassthruAPP::getDocument(CComPtr<CAnchoProtocolSink> aSink)
   return S_OK;
 }
 
-STDMETHODIMP CAnchoPassthruAPP::getEvents(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl)
+STDMETHODIMP CAnchoPassthruAPP::getEventsFromSink(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<DAnchoBrowserEvents> &aEvents)
 {
   ATLASSERT(m_Doc);
 
@@ -343,8 +343,9 @@ STDMETHODIMP CAnchoPassthruAPP::getEvents(CComPtr<CAnchoProtocolSink> aSink, con
   CComVariant var;
   IF_FAILED_RET(browser->GetProperty(L"_anchoBrowserEvents", &var));
 
-  m_BrowserEvents = var.pdispVal;
-  if (!m_BrowserEvents) {
+  CComQIPtr<DAnchoBrowserEvents> events = var.pdispVal;
+  aEvents = events;
+  if (!aEvents) {
     return E_FAIL;
   }
   return S_OK;
@@ -368,13 +369,13 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
 
   if (!m_BrowserEvents) {
     if (!m_Doc) {
-      HRESULT hr = getDocument(pSink);
+      HRESULT hr = getDocumentFromSink(pSink, m_Doc);
       if (S_OK != hr) {
         //We need to return success - otherwise the request would be thrown away
         return S_OK;//hr;
       }
     }
-    IF_FAILED_RET(getEvents(pSink, rawUri));
+    IF_FAILED_RET(getEventsFromSink(pSink, rawUri, m_BrowserEvents));
   }
   if (m_BrowserEvents) {
     CComBSTR method;
@@ -393,6 +394,10 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
       if (reporter) {
         IF_FAILED_RET(reporter->init(rawUri, method));
         IF_FAILED_RET(m_BrowserEvents->OnBeforeRequest(CComVariant(reporter.p)));
+        BOOL cancel = FALSE;
+        if (SUCCEEDED(reporter->shouldCancel(&cancel)) && cancel) {
+          Abort(INET_E_TERMINATED_BIND, 0);
+        }
       }
     }
   }
@@ -422,7 +427,7 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
 
     if (!m_BrowserEvents) {
       if (!m_Doc) {
-        HRESULT hr = getDocument(pSink);
+        HRESULT hr = getDocumentFromSink(pSink, m_Doc);
         if (FAILED(hr)) {
           return hr;
         };
@@ -435,7 +440,7 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
           return S_FALSE;
         }
       }
-      IF_FAILED_RET(getEvents(pSink, bstrUrl));
+      IF_FAILED_RET(getEventsFromSink(pSink, bstrUrl, m_BrowserEvents));
 
       if (!m_BrowserEvents) {
         return S_OK;;

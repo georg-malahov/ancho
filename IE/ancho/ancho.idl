@@ -58,6 +58,7 @@ library anchoLib
     HRESULT getUrl([out] BSTR *aUrl);
     HRESULT redirectRequest([in] BSTR aUrl);
     HRESULT cancelRequest();
+    HRESULT shouldCancel([out] BOOL *aCancel);
   };
 
   [

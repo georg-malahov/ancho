@@ -171,8 +171,8 @@ public:
   STDMETHOD(fireOnBeforeHeaders)(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<IWebRequestReporter> aReporter);
 private:
 
-  STDMETHOD(getDocument)(CComPtr<CAnchoProtocolSink> aSink);
-  STDMETHOD(getEvents)(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl);
+  STDMETHOD(getDocumentFromSink)(CComPtr<CAnchoProtocolSink> aSink, CComPtr<IHTMLDocument2> &aDoc);
+  STDMETHOD(getEventsFromSink)(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<DAnchoBrowserEvents> &aEvents);
   // -------------------------------------------------------------------------
   // Data members
   CComQIPtr<DAnchoBrowserEvents> m_BrowserEvents;
