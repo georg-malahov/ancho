@@ -97,6 +97,12 @@
     }
   };
 
+  // To consider:
+  // Instead of adding error descriptions one by one as we see them,
+  // take them all from https://developer.mozilla.org/en/docs/Table_Of_Errors
+  // and create one big translating table.
+  // Not for HTTP only, but for all possible errors (--> FirefoxErrors).
+  // Note: not all errors are listed on the page (e.g. NS_ERROR_PARSED_DATA_CACHED)
   var FirefoxHttpErrors = {};
   FirefoxHttpErrors[Cr.NS_OK] = {code: 0, msg: 'SUCCESS'};
   FirefoxHttpErrors[Cr.NS_ERROR_UNKNOWN_HOST] = {code: 2, msg: 'UNKNOWN HOST'};
@@ -119,11 +125,18 @@
   FirefoxHttpErrors[Cr.NS_ERROR_SOCKET_CREATE_FAILED] = {code: 19, msg: 'SOCKET CREATE FAILED'};
   FirefoxHttpErrors[Cr.NS_ERROR_ALREADY_OPENED] = {code: 20, msg: 'ALREADY OPENED'};
   FirefoxHttpErrors[Cr.NS_ERROR_NET_INTERRUPT] = {code: 21, msg: 'NET INTERRUPT'};
-  FirefoxHttpErrors[Cr.NS_ERROR_INVALID_CONTENT_ENCODING] = {code: 21, msg: 'INVALID CONTENT ENCODING'};
+  FirefoxHttpErrors[Cr.NS_ERROR_INVALID_CONTENT_ENCODING] = {code: 22, msg: 'INVALID CONTENT ENCODING'};
+  // The following errors are not resolved when NS_ name is used...
+  FirefoxHttpErrors[0x80540006 /* Cr.NS_IMAGELIB_ERROR_NO_DECODER */] = {code: 23, msg: 'IMAGELIB: NO DECODER'};
+  FirefoxHttpErrors[0x805D0021 /* Cr.NS_ERROR_PARSED_DATA_CACHED */] = {code: 24, msg: 'DATA ALREADY CACHED AND PARSED, NO NEED TO REPARSE'};
 
   exports.mapHttpError = function(code) {
     var res = FirefoxHttpErrors[code];
-    return res || {code: 999, msg: 'UNKNOWN_ERROR'};
+    if (!res) {
+      dump('Unknown HTTP request error. Code = ' + code + '\n');
+      return {code: 999, msg: 'UNKNOWN_ERROR'};
+    }
+    return res;
   };
 
 }).call(this);
