@@ -447,8 +447,7 @@
           // with invalid "src".  so need to investigate:
           // (a) what errors are covered here, and
           // (b) how to cover the remaining ones we need.
-          var mappedError = Utils.mapHttpError(statusCode);
-          data.error = mappedError.msg;
+          data.error = Utils.mapHttpError(statusCode);
           this.requestData.monitor.onErrorOccurred.fire([ data ]);
           break;
       }

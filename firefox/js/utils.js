@@ -104,37 +104,37 @@
   // Not for HTTP only, but for all possible errors (--> FirefoxErrors).
   // Note: not all errors are listed on the page (e.g. NS_ERROR_PARSED_DATA_CACHED)
   var FirefoxHttpErrors = {};
-  FirefoxHttpErrors[Cr.NS_OK] = {code: 0, msg: 'SUCCESS'};
-  FirefoxHttpErrors[Cr.NS_ERROR_UNKNOWN_HOST] = {code: 2, msg: 'UNKNOWN HOST'};
-  FirefoxHttpErrors[Cr.NS_ERROR_REDIRECT_LOOP] = {code: 3, msg: 'REDIRECT LOOP'};
-  FirefoxHttpErrors[Cr.NS_ERROR_PROXY_CONNECTION_REFUSED] = {code: 4, msg: 'PROXY REFUSED CONNECTION'};
-  FirefoxHttpErrors[Cr.NS_ERROR_UNKNOWN_PROTOCOL] = {code: 5, msg: 'UNKNOWN PROTOCOL'};
-  FirefoxHttpErrors[Cr.NS_ERROR_MALFORMED_URI] = {code: 6, msg: 'MALFORMED URI'};
-  FirefoxHttpErrors[Cr.NS_ERROR_CONNECTION_REFUSED] = {code: 7, msg: 'CONNECTION REFUSED'};
-  FirefoxHttpErrors[Cr.NS_ERROR_NET_TIMEOUT] = {code: 8, msg: 'NET TIMEOUT'};
-  FirefoxHttpErrors[Cr.NS_ERROR_OFFLINE] = {code: 9, msg: 'OFFLINE'};
-  FirefoxHttpErrors[Cr.NS_BINDING_REDIRECTED] = {code: 10, msg: 'REQUEST REDIRECTED'};
-  FirefoxHttpErrors[Cr.NS_BINDING_RETARGETED] = {code: 11, msg: 'REQUEST RETARGETED'};
-  FirefoxHttpErrors[Cr.NS_BINDING_ABORTED] = {code: 12, msg: 'REQUEST ABORTED'};
-  FirefoxHttpErrors[Cr.NS_BINDING_FAILED] = {code: 13, msg: 'REQUEST FAILED'};
-  FirefoxHttpErrors[Cr.NS_ERROR_ALREADY_CONNECTED] = {code: 14, msg: 'ALREADY CONNECTED'};
-  FirefoxHttpErrors[Cr.NS_ERROR_NOT_CONNECTED] = {code: 15, msg: 'NOT CONNECTED'};
-  FirefoxHttpErrors[Cr.NS_ERROR_IN_PROGRESS] = {code: 16, msg: 'BUSY'};
-  FirefoxHttpErrors[Cr.NS_ERROR_NO_CONTENT] = {code: 17, msg: 'NO CONTENT'};
-  FirefoxHttpErrors[Cr.NS_ERROR_PORT_ACCESS_NOT_ALLOWED] = {code: 18, msg: 'PORT ACCESS NOT ALLOWED'};
-  FirefoxHttpErrors[Cr.NS_ERROR_SOCKET_CREATE_FAILED] = {code: 19, msg: 'SOCKET CREATE FAILED'};
-  FirefoxHttpErrors[Cr.NS_ERROR_ALREADY_OPENED] = {code: 20, msg: 'ALREADY OPENED'};
-  FirefoxHttpErrors[Cr.NS_ERROR_NET_INTERRUPT] = {code: 21, msg: 'NET INTERRUPT'};
-  FirefoxHttpErrors[Cr.NS_ERROR_INVALID_CONTENT_ENCODING] = {code: 22, msg: 'INVALID CONTENT ENCODING'};
+  FirefoxHttpErrors[Cr.NS_OK] = 'SUCCESS';
+  FirefoxHttpErrors[Cr.NS_ERROR_UNKNOWN_HOST] = 'UNKNOWN HOST';
+  FirefoxHttpErrors[Cr.NS_ERROR_REDIRECT_LOOP] = 'REDIRECT LOOP';
+  FirefoxHttpErrors[Cr.NS_ERROR_PROXY_CONNECTION_REFUSED] = 'PROXY REFUSED CONNECTION';
+  FirefoxHttpErrors[Cr.NS_ERROR_UNKNOWN_PROTOCOL] = 'UNKNOWN PROTOCOL';
+  FirefoxHttpErrors[Cr.NS_ERROR_MALFORMED_URI] = 'MALFORMED URI';
+  FirefoxHttpErrors[Cr.NS_ERROR_CONNECTION_REFUSED] = 'CONNECTION REFUSED';
+  FirefoxHttpErrors[Cr.NS_ERROR_NET_TIMEOUT] = 'NET TIMEOUT';
+  FirefoxHttpErrors[Cr.NS_ERROR_OFFLINE] = 'OFFLINE';
+  FirefoxHttpErrors[Cr.NS_BINDING_REDIRECTED] = 'REQUEST REDIRECTED';
+  FirefoxHttpErrors[Cr.NS_BINDING_RETARGETED] = 'REQUEST RETARGETED';
+  FirefoxHttpErrors[Cr.NS_BINDING_ABORTED] = 'REQUEST ABORTED';
+  FirefoxHttpErrors[Cr.NS_BINDING_FAILED] = 'REQUEST FAILED';
+  FirefoxHttpErrors[Cr.NS_ERROR_ALREADY_CONNECTED] = 'ALREADY CONNECTED';
+  FirefoxHttpErrors[Cr.NS_ERROR_NOT_CONNECTED] = 'NOT CONNECTED';
+  FirefoxHttpErrors[Cr.NS_ERROR_IN_PROGRESS] = 'BUSY';
+  FirefoxHttpErrors[Cr.NS_ERROR_NO_CONTENT] = 'NO CONTENT';
+  FirefoxHttpErrors[Cr.NS_ERROR_PORT_ACCESS_NOT_ALLOWED] = 'PORT ACCESS NOT ALLOWED';
+  FirefoxHttpErrors[Cr.NS_ERROR_SOCKET_CREATE_FAILED] = 'SOCKET CREATE FAILED';
+  FirefoxHttpErrors[Cr.NS_ERROR_ALREADY_OPENED] = 'ALREADY OPENED';
+  FirefoxHttpErrors[Cr.NS_ERROR_NET_INTERRUPT] = 'NET INTERRUPT';
+  FirefoxHttpErrors[Cr.NS_ERROR_INVALID_CONTENT_ENCODING] = 'INVALID CONTENT ENCODING';
   // The following errors are not resolved when NS_ name is used...
-  FirefoxHttpErrors[0x80540006 /* Cr.NS_IMAGELIB_ERROR_NO_DECODER */] = {code: 23, msg: 'IMAGELIB: NO DECODER'};
-  FirefoxHttpErrors[0x805D0021 /* Cr.NS_ERROR_PARSED_DATA_CACHED */] = {code: 24, msg: 'DATA ALREADY CACHED AND PARSED, NO NEED TO REPARSE'};
+  FirefoxHttpErrors[0x80540006 /* Cr.NS_IMAGELIB_ERROR_NO_DECODER */] = 'IMAGELIB: NO DECODER';
+  FirefoxHttpErrors[0x805D0021 /* Cr.NS_ERROR_PARSED_DATA_CACHED */] = 'DATA ALREADY CACHED AND PARSED, NO NEED TO REPARSE';
 
   exports.mapHttpError = function(code) {
     var res = FirefoxHttpErrors[code];
     if (!res) {
       dump('Unknown HTTP request error. Code = ' + code + '\n');
-      return {code: 999, msg: 'UNKNOWN_ERROR'};
+      return 'UNKNOWN_ERROR';
     }
     return res;
   };
