@@ -10,25 +10,25 @@
     this.callbacks.push(callback);
     return this;
   };
-  
+
   Event.prototype.removeListener = function(callback) {
-  
+
     var index = this.callbacks.indexOf(callback);
     if (index >= 0) {
       this.callbacks.splice(index, 1);
     }
     return this;
   };
-  
+
   Event.prototype.clearListeners = function() {
     this.callbacks = [];
     return this;
   };
-  
+
   Event.prototype.hasListeners = function() {
     return this.callbacks.length > 0;
   };
-  
+
   Event.prototype.fire = function() {
     var args = arguments;
     var results = [];
@@ -41,7 +41,7 @@
     }
     return results;
   };
-  
+
   var WindowWatcherImpl = function() {
     this.loaders = new Event();
     this.unloaders = new Event();
