@@ -60,13 +60,17 @@ exports.isNumber = function(aArg) {
 }
 
 exports.isArray = function(aArg) {
-  //Interface checking is probably only safe way to determine if aArg is array like object
-  return aArg != undefined
-    && aArg != null
-    && !exports.isString(aArg)
-    && ("length" in aArg)
-    && ("push" in aArg);
-  //This is not usable for array like objects: return Object.prototype.toString.call(aArg) === '[object Array]';
+  try {
+    //Interface checking is probably only safe way to determine if aArg is array like object
+    return aArg != undefined
+      && aArg != null
+      && !exports.isString(aArg)
+      && ("length" in aArg)
+      && ("push" in aArg);
+    //This is not usable for array like objects: return Object.prototype.toString.call(aArg) === '[object Array]';
+  } catch (e) {
+    return false;
+  }
 }
 
 exports.typeName = function(aArg) {
