@@ -59,14 +59,14 @@ var CONTENT_API_NAMES = [
 
 function createChromeAPISubset(chrome, aInstanceID, aAPINames) {
   for (var i = 0; i < aAPINames.length; ++i) {
-    //console.debug("Creating chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
+    console.debug("Creating chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
     chrome[aAPINames[i]] = require(aAPINames[i] + ".js").createAPI(aInstanceID);
   }
 }
 
 function releaseAPISubsetByName(aInstanceID, aAPINames) {
   for (var i = 0; i < aAPINames.length; ++i) {
-    //console.debug("Releasing chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
+    console.debug("Releasing chrome." + aAPINames[i] + " API instance n. " + aInstanceID);
     require(aAPINames[i] + ".js").releaseAPI(aInstanceID);
   }
 }

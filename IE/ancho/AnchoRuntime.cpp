@@ -153,8 +153,9 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserProgressChange(LONG Progress, LONG P
     if (readyState == READYSTATE_INTERACTIVE) {
       CComBSTR url;
       m_pWebBrowser->get_LocationURL(&url);
-      InitializeExtensionScripting(url);
-      m_ExtensionPageAPIPrepared = true;
+      if (SUCCEEDED(InitializeExtensionScripting(url))) {
+        m_ExtensionPageAPIPrepared = true;
+      }
     }
   }
 }
@@ -166,9 +167,10 @@ STDMETHODIMP_(void) CAnchoRuntime::OnNavigateComplete(LPDISPATCH pDispatch, VARI
   CComBSTR url(URL->bstrVal);
   if (isExtensionPage(std::wstring(url))) {
     m_IsExtensionPage = true;
+    /* Too early for api injections
     if (SUCCEEDED(InitializeExtensionScripting(url))) {
       m_ExtensionPageAPIPrepared = true;
-    }
+    }*/
   }
 }
 
