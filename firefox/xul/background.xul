@@ -16,7 +16,7 @@
 
   <!-- regular code -->
   <groupbox flex="1">
-    <browser id="content" flex="1"/>
+    <browser id="content" type="content" flex="1"/>
   </groupbox>
 
 </window>
