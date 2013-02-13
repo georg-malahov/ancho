@@ -9,7 +9,6 @@
   var WindowWatcher = require('./windowWatcher');
   var Config = require('./config');
 
-  const PANEL_MARGIN_SIZE = 20;
   const PANEL_RESIZE_INTERVAL = 200;
 
   var BrowserActionAPI = function() {
@@ -110,10 +109,8 @@
           var oldHeight = oldWidth = 0;
           function resizePopup() {
             if (body.scrollHeight != oldHeight && body.scrollWidth != oldWidth) {
-              panel.height = body.scrollHeight + PANEL_MARGIN_SIZE;
-              panel.width = body.scrollWidth + PANEL_MARGIN_SIZE;
-              oldHeight = iframe.height = body.scrollHeight;
-              oldWidth = iframe.width = body.scrollWidth;
+              oldHeight = panel.height = iframe.height = body.scrollHeight;
+              oldWidth = panel.width = iframe.width = body.scrollWidth;
             }
           }
           resizePopup();
