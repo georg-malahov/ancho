@@ -120,6 +120,12 @@ function loadConfig(addon) {
         }
       }
     } // background
+    if (config.browser_action) {
+      Config.browser_action = {
+        default_icon : config.browser_action.default_icon,
+        default_popup : config.browser_action.default_popup
+      }
+    }
   } // has manifest.json?
 }
 

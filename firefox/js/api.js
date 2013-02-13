@@ -5,10 +5,7 @@
   var TabsAPI = require('./tabs');
   var WindowsAPI = require('./windows');
   var WebRequestAPI = require('./webRequest');
-  // FIXME: browserAction API disabled for now:
-  // + windowWatcher used there doesn't load: improper use of new Event()
-  // + too many TODOs there for now...
-  // var BrowserActionAPI = require('./browserAction');
+  var BrowserActionAPI = require('./browserAction');
   var CookiesAPI = require('./cookies');
   var HistoryAPI = require('./history');
   var DebuggerAPI = require('./debugger');
@@ -30,7 +27,7 @@
       tabs: new TabsAPI(extensionState, contentWindow),
       windows: new WindowsAPI(extensionState, contentWindow),
       webRequest: new WebRequestAPI(extensionState, contentWindow),
-      // browserAction: new BrowserActionAPI(extensionState, contentWindow),
+      browserAction: new BrowserActionAPI(extensionState, contentWindow),
       cookies: new CookiesAPI(extensionState, contentWindow),
       history: new HistoryAPI(extensionState, contentWindow),
       debugger: new DebuggerAPI(extensionState, contentWindow),

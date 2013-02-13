@@ -4,11 +4,13 @@
 
   Cu.import('resource://gre/modules/Services.jsm');
 
-  var Event = require('./event');
+  //var Event = require('./event');
   var Utils = require('./utils');
   var WindowWatcher = require('./windowWatcher');
   var Config = require('./config');
 
+  const PANEL_MARGIN_SIZE = 20;
+  const PANEL_RESIZE_INTERVAL = 200;
 
   var BrowserActionAPI = function() {
     // TODO: this.onClicked = new Event();
@@ -16,7 +18,7 @@
     var urlPrefix = Config.hostExtensionRoot;
     // FIXME: get default extension icon URL from manifest.json
     // FIXME: Config undefined here...
-    this.iconEnabled = false && Config.browser_action
+    this.iconEnabled = Config.browser_action
         && Config.browser_action.default_icon ? true : false;
     this.currentIcon = this.iconEnabled ? urlPrefix
         + Config.browser_action.default_icon : '';
@@ -36,43 +38,99 @@
     var toolbarId = "nav-bar";
     var id = this.buttonId;
     var document = window.document;
+    if (document.getElementById(id)) {
+      // We already have the toolbar button.
+      return;
+    }
     var toolbar = document.getElementById(toolbarId);
-    if (toolbar && !document.getElementById(id)) {
+    if (toolbar) {
       var toolbarButton = document.createElement("toolbarbutton");
       toolbarButton.setAttribute("id", id);
       toolbarButton.setAttribute("type", "button");
-      toolbarButton.setAttribute("image", "");
-      toolbarButton
-          .setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
+      toolbarButton.setAttribute("removable", "true");
+      toolbarButton.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
       toolbarButton.setAttribute("label", "button");
 
-      toolbar.appendChild(toolbarButton);
-      toolbar.setAttribute("currentset", toolbar.currentSet);
-      document.persist(toolbar.id, "currentset");
+      document.getElementById("navigator-toolbox").palette.appendChild(toolbarButton);
+      var currentset = toolbar.getAttribute("currentset").split(",");
+      var index = currentset.indexOf(id);
+      if (index == -1) {
+        if (Config.firstRun) {
+          // No button yet so add it to the toolbar.
+          toolbar.appendChild(toolbarButton);
+          toolbar.setAttribute("currentset", toolbar.currentSet);
+          document.persist(toolbar.id, "currentset");
+        }
+      }
+      else {
+        var before = null;
+        for (var i=index+1; i<currentset.length; i++) {
+          before = document.getElementById(currentset[i]);
+          if (before) {
+            toolbar.insertItem(id, before);
+            break;
+          }
+        }
+        if (!before) {
+          toolbar.insertItem(id);
+        }
+      }
 
       var panel = document.createElement("panel");
       var iframe = document.createElement("iframe");
       iframe.flex = 1;
       toolbarButton.appendChild(panel);
       panel.appendChild(iframe);
-      toolbarButton
-        .addEventListener('click', function() {
-          iframe.setAttribute('src', 'about:blank');
-          panel.openPopup(toolbarButton, "after_start", 0, 0, false, false);
-          // FIXME: get popup URL from manifest.json
-          loadHtml(document, iframe, Config.hostExtensionRoot + 'html/popup.html',
-            function() {
-              var body = iframe.contentDocument.body;
+      toolbarButton.addEventListener('click', function(event) {
+        if (event.target != toolbarButton) {
+          // Only react when button itself is clicked (i.e. not the panel).
+          return;
+        }
+        iframe.setAttribute('src', 'about:blank');
+        panel.openPopup(toolbarButton, "after_start", 0, 0, false, false);
+
+        // Deferred loading of scripting.js since we have a circular reference that causes
+        // problems if we load it earlier.
+        var loadHtml = require('./scripting').loadHtml;
+        loadHtml(document, iframe, Config.hostExtensionRoot + Config.browser_action.default_popup, function() {
+          var body = iframe.contentDocument.body;
+          // We need to intercept link clicks and open them in the current browser window.
+          body.addEventListener("click", function(event) {
+            var link = event.target;
+            if (link.href) {
+              event.preventDefault();
+              var browser = document.getElementById("content");
+              browser.contentWindow.open(link.href, link.target);
+              return false;
+            }
+          }, false);
+
+          // Remember the height and width of the popup.
+          // Check periodically and resize it if necessary.
+          var oldHeight = oldWidth = 0;
+          function resizePopup() {
+            if (body.scrollHeight != oldHeight && body.scrollWidth != oldWidth) {
               panel.height = body.scrollHeight + PANEL_MARGIN_SIZE;
               panel.width = body.scrollWidth + PANEL_MARGIN_SIZE;
-              iframe.height = body.scrollHeight;
-              iframe.width = body.scrollWidth;
-              iframe.contentWindow.close = function() {
-                panel.hidePopup();
-              };
+              oldHeight = iframe.height = body.scrollHeight;
+              oldWidth = iframe.width = body.scrollWidth;
             }
-          );
+          }
+          resizePopup();
+
+          var interval = iframe.contentWindow.setInterval(function() {
+            resizePopup();
+          }, PANEL_RESIZE_INTERVAL);
+          panel.addEventListener("popuphiding", function(event) {
+            panel.removeEventListener("popuphiding", arguments.callee, false);
+            iframe.contentWindow.clearInterval(interval);
+          }, false);
+
+          iframe.contentWindow.close = function() {
+            panel.hidePopup();
+          };
         });
+      });
     }
     this._setIcon(window, this.currentIcon, true);
   };
