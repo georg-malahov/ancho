@@ -146,6 +146,7 @@ library AnchoBgSrvLib
     HRESULT executeScript([in] BSTR aExtensionId, [in] BSTR aCode, [in] INT aFileSpecified);
     HRESULT updateTab([in] LPDISPATCH aProperties);
     HRESULT fillTabInfo([in] VARIANT* aInfo);
+    HRESULT showBrowserActionBar([in] INT aShow);
   };
 
   /*==========================================================================*/

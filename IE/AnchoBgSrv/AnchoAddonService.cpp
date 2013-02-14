@@ -290,6 +290,11 @@ HRESULT CAnchoAddonService::addBrowserActionInfo(LPDISPATCH aBrowserActionInfo)
     return E_POINTER;
   }
   m_BrowserActionInfos->push_back(CComVariant(aBrowserActionInfo));
+
+  for (RuntimeMap::iterator it = m_Runtimes.begin(); it != m_Runtimes.end(); ++it) {;
+    ATLASSERT(it->second.runtime);
+    it->second.runtime->showBrowserActionBar(TRUE);
+  }
   return S_OK;
 }
 

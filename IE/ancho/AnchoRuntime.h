@@ -101,6 +101,7 @@ public:
   STDMETHOD(executeScript)(BSTR aExtensionId, BSTR aCode, INT aFileSpecified);
   STDMETHOD(updateTab)(LPDISPATCH aProperties);
   STDMETHOD(fillTabInfo)(VARIANT* aInfo);
+  STDMETHOD(showBrowserActionBar)(INT aShow);
 
   // DWebBrowserEvents2 methods
   STDMETHOD_(void, OnNavigateComplete)(LPDISPATCH pDispatch, VARIANT *URL);

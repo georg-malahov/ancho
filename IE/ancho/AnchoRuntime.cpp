@@ -490,7 +490,17 @@ STDMETHODIMP CAnchoRuntime::executeScript(BSTR aExtensionId, BSTR aCode, INT aFi
   //TODO: check permissions from manifest
   return S_OK;
 }
-
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoRuntime::showBrowserActionBar(INT aShow)
+{
+  wchar_t clsid[1024] = {0};
+  IF_FAILED_RET(::StringFromGUID2( CLSID_IEToolbar, (OLECHAR*)clsid, sizeof(clsid)));
+  CComVariant clsidVar(clsid);
+  CComVariant show(aShow != FALSE);
+  IF_FAILED_RET(m_pWebBrowser->ShowBrowserBar(&clsidVar, &show, NULL));
+  return S_OK;
+}
 //----------------------------------------------------------------------------
 //
 STDMETHODIMP CAnchoRuntime::updateTab(LPDISPATCH aProperties)
