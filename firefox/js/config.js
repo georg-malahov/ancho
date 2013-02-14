@@ -1,6 +1,10 @@
 (function() {
 
   module.exports = {
+    // Name of the extension
+    extensionName: null,
+    // Are we running it for the first time?
+    firstRun: false,
     // Path to hosted browser extension code.
     hostExtensionPath: '/content/chrome-ext/',
     // An array of objects describing the content scripts that should be applied
