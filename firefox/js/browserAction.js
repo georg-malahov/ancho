@@ -83,6 +83,7 @@
 
       var panel = document.createElement("panel");
       var iframe = document.createElement("iframe");
+      iframe.setAttribute('type', 'chrome');
       iframe.flex = 1;
       toolbarButton.appendChild(panel);
       panel.appendChild(iframe);
