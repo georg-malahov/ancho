@@ -78,6 +78,8 @@ function createWindowWatcher() {
 }
 
 function releaseWindowWatcher() {
+  // TODO: Use the windowWatcher module everywhere.
+  require('./windowWatcher').unload();
   Services.ww.unregisterNotification(watchWindow);
 }
 

@@ -9,51 +9,57 @@
   var WindowWatcher = require('./windowWatcher');
   var Config = require('./config');
 
+  const BUTTON_ID = '__ANCHO_BROWSER_ACTION_BUTTON__';
   const PANEL_RESIZE_INTERVAL = 200;
+  const NAVIGATOR_TOOLBOX = "navigator-toolbox";
+  const TOOLBAR_ID = "nav-bar";
 
-  var BrowserActionAPI = function() {
-    // TODO: this.onClicked = new Event();
-    // TODO : get default button icon url
-    var urlPrefix = Config.hostExtensionRoot;
-    // FIXME: get default extension icon URL from manifest.json
-    // FIXME: Config undefined here...
-    this.iconEnabled = Config.browser_action
-        && Config.browser_action.default_icon ? true : false;
-    this.currentIcon = this.iconEnabled ? urlPrefix
-        + Config.browser_action.default_icon : '';
+  var BrowserActionService = {
+    iconEnabled: false,
+    currentIcon: null,
+    buttonId: null,
 
-    this.buttonId = '__ANCHO_CUSTOM_BUTTON__';
-    var self = this;
-    if (this.iconEnabled) {
-      WindowWatcher.register(function(window) {
-        self.startup(window);
-      }, function(window) {
-        self.shutdown(window);
+    init: function() {
+      // TODO: this.onClicked = new Event();
+      this.iconEnabled = Config.browser_action
+          && Config.browser_action.default_icon ? true : false;
+      this.currentIcon = this.iconEnabled ? Config.hostExtensionRoot
+          + Config.browser_action.default_icon : '';
+
+      this.buttonId = BUTTON_ID;
+      var self = this;
+
+      WindowWatcher.register(function(win) {
+        self.startup(win);
+      }, function(win) {
+        self.shutdown(win);
       });
-    }
-  };
+    },
 
-  BrowserActionAPI.prototype._installIcon = function(window) {
-    var toolbarId = "nav-bar";
-    var id = this.buttonId;
-    var document = window.document;
-    if (document.getElementById(id)) {
-      // We already have the toolbar button.
-      return;
-    }
-    var toolbar = document.getElementById(toolbarId);
-    if (toolbar) {
+    installIcon: function(window) {
+      var id = this.buttonId;
+      var document = window.document;
+      if (document.getElementById(id)) {
+        // We already have the toolbar button.
+        return;
+      }
+      var toolbar = document.getElementById(TOOLBAR_ID);
+      if (!toolbar) {
+        // No toolbar in this window so we're done.
+        return;
+      }
       var toolbarButton = document.createElement("toolbarbutton");
       toolbarButton.setAttribute("id", id);
       toolbarButton.setAttribute("type", "button");
       toolbarButton.setAttribute("removable", "true");
       toolbarButton.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
-      toolbarButton.setAttribute("label", "button");
+      toolbarButton.setAttribute("label", Config.extensionName);
+      toolbarButton.style.listStyleImage = "url(" + this.currentIcon + ")";
 
-      document.getElementById("navigator-toolbox").palette.appendChild(toolbarButton);
+      document.getElementById(NAVIGATOR_TOOLBOX).palette.appendChild(toolbarButton);
       var currentset = toolbar.getAttribute("currentset").split(",");
       var index = currentset.indexOf(id);
-      if (index == -1) {
+      if (index === -1) {
         if (Config.firstRun) {
           // No button yet so add it to the toolbar.
           toolbar.appendChild(toolbarButton);
@@ -80,72 +86,105 @@
       iframe.flex = 1;
       toolbarButton.appendChild(panel);
       panel.appendChild(iframe);
-      toolbarButton.addEventListener('click', function(event) {
-        if (event.target != toolbarButton) {
-          // Only react when button itself is clicked (i.e. not the panel).
-          return;
-        }
-        iframe.setAttribute('src', 'about:blank');
-        panel.openPopup(toolbarButton, "after_start", 0, 0, false, false);
 
-        // Deferred loading of scripting.js since we have a circular reference that causes
-        // problems if we load it earlier.
-        var loadHtml = require('./scripting').loadHtml;
-        loadHtml(document, iframe, Config.hostExtensionRoot + Config.browser_action.default_popup, function() {
-          var body = iframe.contentDocument.body;
-          // We need to intercept link clicks and open them in the current browser window.
-          body.addEventListener("click", function(event) {
-            var link = event.target;
-            if (link.href) {
-              event.preventDefault();
-              var browser = document.getElementById("content");
-              browser.contentWindow.open(link.href, link.target);
-              return false;
-            }
-          }, false);
+      var self = this;
+      toolbarButton.addEventListener('click', function(event) { self.clickHandler(event); }, false);
+      this.setIcon(window, this.currentIcon, true);
+    },
 
-          // Remember the height and width of the popup.
-          // Check periodically and resize it if necessary.
-          var oldHeight = oldWidth = 0;
-          function resizePopup() {
-            if (body.scrollHeight != oldHeight && body.scrollWidth != oldWidth) {
-              oldHeight = panel.height = iframe.height = body.scrollHeight;
-              oldWidth = panel.width = iframe.width = body.scrollWidth;
-            }
+    clickHandler: function(event) {
+      if (!event.target || event.target.tagName !== "toolbarbutton") {
+        // Only react when button itself is clicked (i.e. not the panel).
+        return;
+      }
+      var document = event.target.ownerDocument;
+      var toolbarButton = event.target;
+      var panel = toolbarButton.firstChild;
+      var iframe = panel.firstChild;
+      iframe.setAttribute('src', 'about:blank');
+      panel.openPopup(toolbarButton, "after_start", 0, 0, false, false);
+
+      // Deferred loading of scripting.js since we have a circular reference that causes
+      // problems if we load it earlier.
+      var loadHtml = require('./scripting').loadHtml;
+      loadHtml(document, iframe, Config.hostExtensionRoot + Config.browser_action.default_popup, function() {
+        var body = iframe.contentDocument.body;
+        // We need to intercept link clicks and open them in the current browser window.
+        body.addEventListener("click", function(event) {
+          var link = event.target;
+          if (link.href) {
+            event.preventDefault();
+            var browser = document.getElementById("content");
+            browser.contentWindow.open(link.href, link.target);
+            return false;
           }
+        }, false);
+
+        // Remember the height and width of the popup.
+        // Check periodically and resize it if necessary.
+        var oldHeight = oldWidth = 0;
+        function resizePopup() {
+          if (body.scrollHeight !== oldHeight && body.scrollWidth !== oldWidth) {
+            // There seems to be a one-off error here. The first time (and only the first time)
+            // the panel is displayed, it has both horizontal and vertical scrollbars (at least on
+            // my machine). Adding one pixel fixes the problem.
+            // TODO: Diagnose and fix this properly.
+            oldHeight = panel.height = iframe.height = body.scrollHeight+1;
+            oldWidth = panel.width = iframe.width = body.scrollWidth+1;
+          }
+        }
+        resizePopup();
+
+        var interval = iframe.contentWindow.setInterval(function() {
           resizePopup();
+        }, PANEL_RESIZE_INTERVAL);
+        panel.addEventListener("popuphiding", function(event) {
+          panel.removeEventListener("popuphiding", arguments.callee, false);
+          iframe.contentWindow.clearInterval(interval);
+        }, false);
 
-          var interval = iframe.contentWindow.setInterval(function() {
-            resizePopup();
-          }, PANEL_RESIZE_INTERVAL);
-          panel.addEventListener("popuphiding", function(event) {
-            panel.removeEventListener("popuphiding", arguments.callee, false);
-            iframe.contentWindow.clearInterval(interval);
-          }, false);
-
-          iframe.contentWindow.close = function() {
-            panel.hidePopup();
-          };
-        });
+        iframe.contentWindow.close = function() {
+          panel.hidePopup();
+        };
       });
-    }
-    this._setIcon(window, this.currentIcon, true);
-  };
+    },
 
-  BrowserActionAPI.prototype.shutdown = function(window) {
-    if (this.iconEnabled) {
+    setIcon: function(window, iconUrl, notAttach) {
       var id = this.buttonId;
       var element = window.document.getElementById(id);
+      // if the button is available set new icon
       if (element) {
-        element.parentNode.removeChild(element);
+        element.style.listStyleImage = 'url("' + iconUrl + '")';
+      }
+    },
+
+    updateIcon: function() {
+      var self = this;
+      WindowWatcher.forAllWindows(function(window) {
+        self.setIcon(window, self.currentIcon);
+      });
+    },
+
+    shutdown: function(window) {
+      document = window.document;
+      var toolbarButton = document.getElementById(this.buttonId);
+      var toolbar = document.getElementById(TOOLBAR_ID);
+      var palette = document.getElementById(NAVIGATOR_TOOLBOX).palette;
+      toolbar.removeChild(toolbarButton);
+      palette.removeChild(toolbarButton);
+    },
+
+    startup: function(window) {
+      if (this.iconEnabled) {
+        this.installIcon(window);
       }
     }
   };
 
-  BrowserActionAPI.prototype.startup = function(window) {
-    if (this.iconEnabled) {
-      this._installIcon(window);
-    }
+  // Start the service once
+  BrowserActionService.init();
+
+  var BrowserActionAPI = function() {
   };
 
   BrowserActionAPI.prototype.getBadgeBackgroundColor = function() {
@@ -187,24 +226,9 @@
       throw new Error('Unsupported details when setting icon - '
           + JSON.stringify(details));
     }
-    this._updateIcon();
+    BrowserActionService.updateIcon();
   };
 
-  BrowserActionAPI.prototype._setIcon = function(window, iconUrl, notAttach) {
-    var id = this.buttonId;
-    var element = window.document.getElementById(id);
-    // if the button is available set new icon
-    if (element) {
-      element.style.listStyleImage = 'url("' + iconUrl + '")';
-    }
-  };
-
-  BrowserActionAPI.prototype._updateIcon = function() {
-    var self = this;
-    WindowWatcher.forAllWindows(function(window) {
-      self._setIcon(window, self.currentIcon);
-    });
-  };
 
   module.exports = BrowserActionAPI;
 

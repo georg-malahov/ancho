@@ -67,19 +67,22 @@ function setResourceSubstitution(addon) {
   resourceProtocol.setSubstitution('ancho', addon.getResourceURI('/'));
 }
 
-function loadConfig(addon) {
+function loadConfig(addon, firstRun) {
   // Load the manifest
   Cu.import('resource://ancho/modules/Require.jsm');
   var baseURI = Services.io.newURI('resource://ancho/', '', null);
   require = Require.createRequireForWindow(this, baseURI);
 
   var Config = require('./js/config');
+  Config.firstRun = firstRun;
+
   var readStringFromUrl = require('./js/utils').readStringFromUrl;
 
   if (addon.hasResource('chrome-ext/manifest.json')) {
     var manifestUrl = addon.getResourceURI('chrome-ext/manifest.json');
     var manifest = readStringFromUrl(manifestUrl);
     var config = JSON.parse(manifest);
+    Config.extensionName = config.name;
     // Set the module search path if any
     if ('module_search_path' in config) {
       for (var i=0; i<config.module_search_path.length; i++) {
@@ -140,7 +143,7 @@ function startup(data, reason) {
 
   AddonManager.getAddonByID('ancho@salsitasoft.com', function(addon) {
     setResourceSubstitution(addon);
-    loadConfig(addon);
+    loadConfig(addon, (reason === ADDON_INSTALL || reason === ADDON_ENABLE));
     createBackground();
   });
 }
