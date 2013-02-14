@@ -23,13 +23,13 @@
   function _prepareArrayArgument(arg, results) {
     if (Array.isArray(arg)) {
       return arg;
-    } else if (typeof arg == 'string') {
+    } else if (typeof arg === 'string') {
       return [arg];
-    } else if (typeof keys == 'object' && results) {
+    } else if (typeof arg === 'object' && results) {
       var array = [];
       for (var item in arg) {
         array.push(item);
-        results[key] = keys[key]; // preparing defaults
+        results[item] = arg[item]; // preparing defaults
       }
       return array;
     } else {
@@ -44,7 +44,7 @@
         var results = {};
         var myKeys = _prepareArrayArgument(keys, results);
         if (!myKeys) {
-          throw new Error("Invocation of method get doesn't match definition get(optional string or array or object keys, function callback)");
+          throw new Error("Invocation of method get doesn't match definition");
         }
 
         var callCallback = true;
@@ -55,7 +55,8 @@
           }
         };
         if (myKeys.length) {
-          var statement = this.connection.createStatement('SELECT key, value FROM '+this.tableName+' WHERE key IN (:key)');
+          var statement =
+            this.connection.createStatement('SELECT key, value FROM '+this.tableName+' WHERE key IN (:key)');
           var par, params = statement.newBindingParamsArray();
           for (var i=0; i<myKeys.length; i++) {
             par = params.newBindingParams();
@@ -78,7 +79,7 @@
             // handleResult is not called with the empty resultRows
             // so we have to call back in this case
             handleCompletion: function(reason) {
-              if (reason == Ci.mozIStorageStatementCallback.REASON_FINISHED) {
+              if (reason === Ci.mozIStorageStatementCallback.REASON_FINISHED) {
                 myCallback(results);
               } else {
                 dbError({ message: 'select statement not finished' });
@@ -97,7 +98,8 @@
 
     set: function(items, callback) {
       if (typeof items === 'object') {
-        var statement = this.connection.createStatement('REPLACE INTO '+this.tableName+' (key, value) VALUES (:key, :value)');
+        var statement =
+          this.connection.createStatement('REPLACE INTO '+this.tableName+' (key, value) VALUES (:key, :value)');
 
         var par, params = statement.newBindingParamsArray();
         for (var key in items) {
@@ -110,7 +112,7 @@
 
         statement.executeAsync({
           handleCompletion: function(reason) {
-            if (reason == Ci.mozIStorageStatementCallback.REASON_FINISHED) {
+            if (reason === Ci.mozIStorageStatementCallback.REASON_FINISHED) {
               if (typeof callback === 'function') {
                 callback();
               }
@@ -123,7 +125,7 @@
         });
 
       } else {
-        throw new Error("Invocation of set doesn't match definition set(object items, optional function callback)");
+        throw new Error("Invocation of set doesn't match definition");
       }
     },
 
@@ -132,9 +134,10 @@
         var results = {};
         var myKeys = _prepareArrayArgument(keys, results);
         if (!myKeys) {
-          throw new Error("Invocation of method remove doesn't match definition remove(optional string or array keys, function callback)");
+          throw new Error("Invocation of method remove doesn't match definition");
         }
-        var statement = this.connection.createStatement('DELETE FROM '+this.tableName+' WHERE key IN (:key)');
+        var statement =
+          this.connection.createStatement('DELETE FROM '+this.tableName+' WHERE key IN (:key)');
 
         var par, params = statement.newBindingParamsArray();
         for (var i=0; i<myKeys.length; i++) {
@@ -146,7 +149,7 @@
 
         statement.executeAsync({
           handleCompletion: function(reason) {
-            if (reason == Ci.mozIStorageStatementCallback.REASON_FINISHED) {
+            if (reason === Ci.mozIStorageStatementCallback.REASON_FINISHED) {
               if (typeof callback === 'function') {
                 callback();
               }
