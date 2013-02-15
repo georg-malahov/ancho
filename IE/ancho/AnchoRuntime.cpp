@@ -57,7 +57,6 @@ HRESULT CAnchoRuntime::InitAddons()
     }
     dwLen = 4096;
   }
-
   return S_OK;
 }
 
@@ -117,7 +116,7 @@ HRESULT CAnchoRuntime::Init()
   IF_FAILED_RET(m_pAnchoService.CoCreateInstance(CLSID_AnchoAddonService));
 
   // Registering tab in service - obtains tab id and assigns it to the tab as property
-  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, &m_TabID));
+  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, m_HeartBeatSlave.id(), &m_TabID));
   HWND hwnd;
   m_pWebBrowser->get_HWND((long*)&hwnd);
   ::SetProp(hwnd, s_AnchoTabIDPropertyName, (HANDLE)m_TabID);
@@ -192,7 +191,7 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
   }
   CComBSTR bstrUrl;
   removeUrlFragment(pURL->bstrVal, &bstrUrl);
-  m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop);
+  m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop != VARIANT_FALSE);
 
   // Check if this is a new tab we are creating programmatically.
   // If so redirect it to the correct URL.
