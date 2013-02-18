@@ -3,6 +3,8 @@
   var Cu = Components.utils;
   Cu.import('resource://gre/modules/Services.jsm');
 
+  const BROWSER_WINDOW_TYPE = 'navigator:browser';
+
   var Event = function() {
     this.callbacks = [];
   };
@@ -42,6 +44,10 @@
     return results;
   };
 
+  function _isBrowserWindow(browserWindow) {
+    return BROWSER_WINDOW_TYPE === browserWindow.document.documentElement.getAttribute('windowtype');
+  }
+
   var WindowWatcherImpl = function() {
     this.loaders = new Event();
     this.unloaders = new Event();
@@ -65,17 +71,21 @@
       var self = this;
       this.notificationListener = function(browserWindow, topic) {
         if (topic === "domwindowopened") {
-          if ('complete' === browserWindow.document.readyState) {
+          if ('complete' === browserWindow.document.readyState && _isBrowserWindow(browserWindow)) {
             self.loaders.fire(browserWindow);
           } else {
             browserWindow.addEventListener('load', function() {
               browserWindow.removeEventListener('load', arguments.callee, false);
-              self.loaders.fire(browserWindow);
+              if (_isBrowserWindow(browserWindow)) {
+                self.loaders.fire(browserWindow);
+              }
             });
           }
         }
         if (topic === "domwindowclosed") {
-          self.unloaders.fire(browserWindow);
+          if (_isBrowserWindow(browserWindow)) {
+            self.unloaders.fire(browserWindow);
+          }
         }
       };
       Services.ww.registerNotification(this.notificationListener);
