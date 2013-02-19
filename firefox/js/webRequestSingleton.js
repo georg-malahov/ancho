@@ -14,6 +14,8 @@
   var HTTP_ON_EXAMINE_RESPONSE = 'http-on-examine-response';
   var HTTP_ON_EXAMINE_CACHED_RESPONSE = 'http-on-examine-cached-response';
 
+  var HTTP_STATUS_NOT_MODIFIED = 304;
+
   var BinaryInputStream = Components.Constructor('@mozilla.org/binaryinputstream;1', 'nsIBinaryInputStream');
   var StorageStream = Components.Constructor('@mozilla.org/storagestream;1', 'nsIStorageStream');
   var BinaryOutputStream = Components.Constructor('@mozilla.org/binaryoutputstream;1', 'nsIBinaryOutputStream');
@@ -294,7 +296,7 @@
     // params.ip = ???
 
     // fire onBeforeRedirect
-    var redirected = (statusCode >= 300 && statusCode < 400);
+    var redirected = (statusCode >= 300 && statusCode < 400) && (statusCode != HTTP_STATUS_NOT_MODIFIED);
     if (redirected) {
       params.timeStamp = (new Date()).getTime();
       params.redirectUrl = httpChannel.getResponseHeader('Location');
