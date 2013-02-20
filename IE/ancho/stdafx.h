@@ -94,3 +94,5 @@ using namespace LIB_BhoHelper;
   if (!_val) return E_POINTER;
 
 #include <Exceptions.h>
+#include <SimpleWrappers.h>
+#include <IPCHeartbeat.h>

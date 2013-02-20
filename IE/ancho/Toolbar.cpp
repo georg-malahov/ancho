@@ -17,6 +17,7 @@ HRESULT CToolbar::InternalSetSite()
     ATLASSERT(0 && "TOOLBAR: Failed to obtain 'Frame Tab' window handle.");
     return E_FAIL;
   }
+  ATLTRACE(L"ANCHO: toolbar InternalSetSite() - CoCreateInstace(CLSID_AnchoAddonService)\n");
   // create addon service object
   IF_FAILED_RET(mAnchoService.CoCreateInstance(CLSID_AnchoAddonService));
   CComBSTR url;
@@ -27,6 +28,7 @@ HRESULT CToolbar::InternalSetSite()
   mAnchoService->getDispatchObject(&dispatchObject);
   mContentWindow->setExternalObject(dispatchObject);
   mContentWindow->setTabId(mTabId);
+  ATLTRACE(L"ANCHO: toolbar InternalSetSite() - initialization finished\n");
   return RunToolbarPage();
 }
 

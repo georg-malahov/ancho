@@ -266,7 +266,10 @@ public:
     : mCurrentValue(aVariant.mCurrentValue) {}
 
   JS_OBJECT_TYPE_METHODS(std::wstring, String, BSTR, VT_BSTR, ENotAString)
+#pragma warning( push )
+#pragma warning( disable : 4800 )
   JS_OBJECT_TYPE_METHODS(bool, Bool, BOOL, VT_BOOL, ENotABool)
+#pragma warning( pop )
   JS_OBJECT_TYPE_METHODS(int, Int, INT, VT_I4, ENotAnInt)
   JS_OBJECT_TYPE_METHODS(double, Double, double, VT_R8, ENotADouble)
 
