@@ -6,8 +6,6 @@
   var getWindowId = require('./utils').getWindowId;
   var WebRequestSingleton = require('./webRequestSingleton');
 
-  const EXTENSION_ID = 'ancho@salsitasoft.com';
-
   function EventDispatcher() {
     this._listeners = {};
   }
@@ -54,7 +52,7 @@
   }
 
   var ExtensionState = {
-    id: EXTENSION_ID,
+    id: null, // Set by bootstrap.js
     backgroundWindow: null,
     eventDispatcher: new EventDispatcher(),
     _unloaders: {},

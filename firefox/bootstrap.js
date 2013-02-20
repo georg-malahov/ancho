@@ -3,6 +3,8 @@ const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/AddonManager.jsm');
 
+const EXTENSION_ID = 'ancho@salsitasoft.com';
+
 // Create background part of the extension (window object). The
 // background script is loaded separately using the window for its context
 // so that it will have access to our CommonJS functionality and
@@ -70,8 +72,12 @@ function setResourceSubstitution(addon) {
 function loadConfig(addon, firstRun) {
   // Load the manifest
   Cu.import('resource://ancho/modules/Require.jsm');
+
   var baseURI = Services.io.newURI('resource://ancho/', '', null);
   require = Require.createRequireForWindow(this, baseURI);
+
+  var extensionState = require('./js/state');
+  extensionState.id = EXTENSION_ID;
 
   var Config = require('./js/config');
   Config.firstRun = firstRun;
@@ -141,7 +147,7 @@ function unloadBackgroundScripts() {
 function startup(data, reason) {
   dump('\nAncho: starting up ...\n\n');
 
-  AddonManager.getAddonByID('ancho@salsitasoft.com', function(addon) {
+  AddonManager.getAddonByID(EXTENSION_ID, function(addon) {
     setResourceSubstitution(addon);
     loadConfig(addon, (reason === ADDON_INSTALL || reason === ADDON_ENABLE));
     createBackground();
