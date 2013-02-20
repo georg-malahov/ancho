@@ -10,7 +10,6 @@
   var Config = require('./config');
 
   const BUTTON_ID = '__ANCHO_BROWSER_ACTION_BUTTON__';
-  const PANEL_RESIZE_INTERVAL = 200;
   const NAVIGATOR_TOOLBOX = "navigator-toolbox";
   const TOOLBAR_ID = "nav-bar";
 
@@ -124,26 +123,23 @@
         // Remember the height and width of the popup.
         // Check periodically and resize it if necessary.
         var oldHeight = oldWidth = 0;
+        function getPanelBorderWidth(which) {
+          return parseFloat(document.defaultView.getComputedStyle(panel)['border' + which + 'Width']);
+        }
+
         function resizePopup() {
           if (body.scrollHeight !== oldHeight && body.scrollWidth !== oldWidth) {
-            // There seems to be a one-off error here. The first time (and only the first time)
-            // the panel is displayed, it has both horizontal and vertical scrollbars (at least on
-            // my machine). Adding one pixel fixes the problem.
-            // TODO: Diagnose and fix this properly.
-            oldHeight = panel.height = iframe.height = body.scrollHeight+1;
-            oldWidth = panel.width = iframe.width = body.scrollWidth+1;
+            oldHeight = panel.height = iframe.height =
+              (body.scrollHeight + getPanelBorderWidth('Top') + getPanelBorderWidth('Bottom'));
+            oldWidth = panel.width = iframe.width =
+              (body.scrollWidth + getPanelBorderWidth('Left') + getPanelBorderWidth('Right'));
           }
         }
         resizePopup();
 
-        var interval = iframe.contentWindow.setInterval(function() {
+        iframe.contentDocument.addEventListener('MozScrolledAreaChanged', function(event) {
           resizePopup();
-        }, PANEL_RESIZE_INTERVAL);
-        panel.addEventListener("popuphiding", function(event) {
-          panel.removeEventListener("popuphiding", arguments.callee, false);
-          iframe.contentWindow.clearInterval(interval);
         }, false);
-
         iframe.contentWindow.close = function() {
           panel.hidePopup();
         };
