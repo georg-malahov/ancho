@@ -299,6 +299,7 @@ HRESULT CAnchoAddonService::addBrowserActionInfo(LPDISPATCH aBrowserActionInfo)
   if (!aBrowserActionInfo) {
     return E_POINTER;
   }
+
   m_BrowserActionInfos->push_back(CComVariant(aBrowserActionInfo));
 
   {
@@ -775,12 +776,14 @@ STDMETHODIMP CAnchoAddonService::registerBrowserActionToolbar(INT aFrameTab, BST
   CString url;
   url.Format(L"res://%s/BROWSER_ACTION_TOOLBAR.HTML", appPath);
   *aUrl = url.AllocSysString();
+  ATLTRACE(L"ANCHO SERVICE: registered browser action toolbar; tab: %d\n", *aTabId);
   return S_OK;
 }
 //----------------------------------------------------------------------------
 //
 STDMETHODIMP CAnchoAddonService::unregisterBrowserActionToolbar(INT aTabId)
 {
+  ATLTRACE(L"ANCHO SERVICE: unregistering browser action toolbar; tab: %d\n", aTabId);
   m_BrowserActionCallbacks.erase(aTabId);
   return S_OK;
 }

@@ -79,6 +79,7 @@ void CAnchoRuntime::DestroyAddons()
   {
     m_pWebBrowser.Release();
   }
+  ATLTRACE(L"ANCHO: all addons destroyed for runtime %d\n", m_TabID);
 }
 
 //----------------------------------------------------------------------------
@@ -112,6 +113,7 @@ HRESULT CAnchoRuntime::Init()
 
   AtlAdvise(m_pWebBrowser, (IUnknown *)(TWebBrowserEvents *) this, DIID_DWebBrowserEvents2, &m_WebBrowserEventsCookie);
 
+  ATLTRACE(L"ANCHO: runtime initialization - CoCreateInstace(CLSID_AnchoAddonService)\n");
   // create addon service object
   IF_FAILED_RET(m_pAnchoService.CoCreateInstance(CLSID_AnchoAddonService));
 
@@ -132,6 +134,7 @@ HRESULT CAnchoRuntime::Init()
   // Set the sink as property of the browser so it can be retrieved if someone wants to send
   // us events.
   IF_FAILED_RET(m_pWebBrowser->PutProperty(L"_anchoBrowserEvents", CComVariant(m_pBrowserEventSource)));
+  ATLTRACE(L"ANCHO: runtime %d initialized\n", m_TabID);
   return S_OK;
 }
 
@@ -178,10 +181,22 @@ STDMETHODIMP_(void) CAnchoRuntime::OnNavigateComplete(LPDISPATCH pDispatch, VARI
 STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VARIANT *pURL, VARIANT *Flags,
   VARIANT *TargetFrameName, VARIANT *PostData, VARIANT *Headers, BOOL *Cancel)
 {
+  static bool bFirstRun = true;
+
   // Add the frame to the frames map so we can retrieve the IWebBrowser2 object using the URL.
   ATLASSERT(pURL->vt == VT_BSTR && pURL->bstrVal != NULL);
   CComQIPtr<IWebBrowser2> pWebBrowser(pDisp);
   ATLASSERT(pWebBrowser != NULL);
+
+  // Workaround to ensure that first request goes through PAPP
+  if (bFirstRun) {
+    bFirstRun = false;
+    *Cancel = TRUE;
+    pWebBrowser->Stop();
+    pWebBrowser->Navigate2(pURL, Flags, TargetFrameName, PostData, Headers);
+    return;
+  }
+
   VARIANT_BOOL isTop;
   if (SUCCEEDED(pWebBrowser->get_TopLevelContainer(&isTop))) {
     if (isTop) {
@@ -462,6 +477,7 @@ STDMETHODIMP CAnchoRuntime::SetSite(IUnknown *pUnkSite)
   else
   {
     DestroyAddons();
+    Cleanup();
   }
   return hr;
 }
