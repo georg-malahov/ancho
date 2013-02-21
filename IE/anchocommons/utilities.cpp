@@ -1,4 +1,7 @@
 #include "anchocommons.h"
+#include "Exceptions.h"
+
+#include <ShlObj.h>
 
 //----------------------------------------------------------------------------
 //
@@ -22,3 +25,33 @@ std::wstring getDomainName(const std::wstring &aUrl)
   return aUrl.substr(domainStart, domainEnd-domainStart);
 }
 
+typedef HRESULT (WINAPI* fGetKnownFolderPath)(REFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken, PWSTR *path);
+
+std::wstring getSystemPathWithFallback(REFKNOWNFOLDERID aKnownFolderID, int aCLSID)
+{
+  HINSTANCE hShell32DLLInst = LoadLibrary(L"Shell32.dll");
+  if (hShell32DLLInst)
+  {
+    // If we are on Vista or later we should use KNOWNFOLDERID to get a directory
+    LPWSTR path;
+    fGetKnownFolderPath pfnGetKnownFolderPath =
+      (fGetKnownFolderPath) GetProcAddress(hShell32DLLInst, "SHGetKnownFolderPath");
+    if (pfnGetKnownFolderPath) {
+      IF_FAILED_THROW(pfnGetKnownFolderPath(aKnownFolderID, 0, NULL, &path));
+      std::wstring tmpPath = path;
+      ::CoTaskMemFree(path);
+      return tmpPath;
+    }
+  }
+
+  // This probably means we are on XP, so we fall back on the normal SHGetFolderPath call.
+  WCHAR appDataPath[MAX_PATH];
+  IF_FAILED_THROW(SHGetFolderPath(
+                    0, //hwndOwner
+                    aCLSID, //nFolder
+                    NULL, //hToken
+                    SHGFP_TYPE_CURRENT, //dwFlags
+                    appDataPath //pszPath
+                  ));
+  return std::wstring(appDataPath);
+}

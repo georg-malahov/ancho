@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <atltrace.h>
 
 //TODO - create proper exception hierarchy
 struct EInvalidPointer: std::exception { };
@@ -12,7 +13,7 @@ struct ENotADouble: ECast { };
 struct ENotABool: ECast { };
 
 struct EHResult: std::exception
-{ 
+{
   EHResult(HRESULT hr): mHResult(hr) {}
   HRESULT mHResult;
 };

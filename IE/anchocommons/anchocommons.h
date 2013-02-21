@@ -18,5 +18,8 @@ extern const wchar_t * s_AnchoFnGetContentAPI;
 extern const wchar_t * s_AnchoFnReleaseContentAPI;
 extern const wchar_t * s_AnchoTabIDPropertyName;
 
+
+#include <SHTypes.h>
 bool isExtensionPage(const std::wstring &aUrl);
 std::wstring getDomainName(const std::wstring &aUrl);
+std::wstring getSystemPathWithFallback(REFKNOWNFOLDERID aKnownFolderID, int aCLSID);
