@@ -72,16 +72,16 @@ function releaseAPISubsetByName(aInstanceID, aAPINames) {
 }
 
 function releaseAPISubset(aInstanceID, aAPIInstance) {
-  for (var i in aAPIInstance) {
+  for (var apiName in aAPIInstance) {
     try {
       //TODO - when console will be available in content scripts stop
       //its injection in chrome api and remove this temporary test
-      if (i != 'console') {
-        console.debug("Releasing chrome." + i + " API instance n. " + aInstanceID);
-        require(i + ".js").releaseAPI(aInstanceID);
+      if (apiName != 'console') {
+        console.debug("Releasing chrome." + apiName + " API instance n. " + aInstanceID);
+        require(apiName + ".js").releaseAPI(aInstanceID);
       }
     } catch (e) {
-      console.error("Releasing of chrome." + i + " API instance n. " + aInstanceID + " failed! " + e.description);
+      console.error("Releasing of chrome." + apiName + " API instance n. " + aInstanceID + " failed! " + e.description);
     }
   }
 }

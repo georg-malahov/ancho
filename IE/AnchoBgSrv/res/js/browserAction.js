@@ -33,7 +33,7 @@ var BrowserAction = function(instanceID) {
 
   function setBrowserActionProperty(aTabId, aPropertyName, aValue) {
     if (aTabId) {
-      if (aPropertyName == 'badge' && aValue == '') {
+      if (aPropertyName === 'badge' && aValue === '') {
         delete browserActionInfo.tabSpecificInfo[aTabId];
         return;
       }

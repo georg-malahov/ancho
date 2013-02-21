@@ -2,25 +2,27 @@
 <html>
 <head>
   <style>
-    body, html {
+    body, html
+    {
       margin: 0px;
       padding: 0px;
       background-color: rgb(215,228,242);
       height: 100%;
     }
-
-    .baButton {
+    .baButton
+    {
       height: 21px;
       width: 21px;
       background-color: transparent;
       background-repeat: no-repeat;
-      background-position:center;
-      border : solid 1px transparent;
+      background-position: center;
+      border: solid 1px transparent;
       margin: 3px;
       text-align: right;
       float: left;
     }
-    .baBadge {
+    .baBadge
+    {
       height: 11px;
       font-family: Arial;
       font-size: x-small;
@@ -34,100 +36,103 @@
       top: 10px;
     }
   </style>
+
   <script>
-  function buttonOnMouseOver(aElement) {
-    aElement.style.border = 'solid 1px #CCCCCC';
-  }
-
-  function buttonOnMouseOut(aElement) {
-    aElement.style.border = 'solid 1px transparent';
-	}
-	function buttonOnMouseDown(aElement) {
-	  aElement.style.border = 'solid 1px #000000';
-	}
-
-  var mouseEventsString = 'onclick="browserActions[this.id].onClick(event.screenX, event.screenY+15, browserTabID)" onmousedown="buttonOnMouseDown(this)" onmouseup="buttonOnMouseOver(this)" onmouseover="buttonOnMouseOver(this)" onmouseout="buttonOnMouseOut(this)" ';
-
-  //if possible use tab specific properties
-  function mergeTabSpecifics(aGlobal, aTabSpecific) {
-    var info = {};
-    for (var attrname in aGlobal) {
-      info[attrname] = aGlobal[attrname];
+    function buttonOnMouseOver(aElement) {
+      aElement.style.border = 'solid 1px #CCCCCC';
     }
-    if (aTabSpecific) {
-      for (var attrname in aTabSpecific) {
-        info[attrname] = aTabSpecific[attrname];
+
+    function buttonOnMouseOut(aElement) {
+      aElement.style.border = 'solid 1px transparent';
+    }
+    function buttonOnMouseDown(aElement) {
+      aElement.style.border = 'solid 1px #000000';
+    }
+
+    var mouseEventsString = 'onclick="browserActions[this.id].onClick(event.screenX, event.screenY+15, browserTabID)" onmousedown="buttonOnMouseDown(this)" onmouseup="buttonOnMouseOver(this)" onmouseover="buttonOnMouseOver(this)" onmouseout="buttonOnMouseOut(this)" ';
+
+    //if possible use tab specific properties
+    function mergeTabSpecifics(aGlobal, aTabSpecific) {
+      var info = {};
+      for (var attrname in aGlobal) {
+        info[attrname] = aGlobal[attrname];
       }
-    }
-    return info;
-  }
-
-
-  function getButtonCode(aId) {
-    var info = mergeTabSpecifics(browserActions[aId].globalInfo, browserActions[aId].tabSpecificInfo[browserTabID]);
-
-    var str = '<div class="baButton" id=\"' + aId  + '\" ' ;
-    if (info.title) {
-      str += 'title=' + '\"' + info.title + '\"';
-    }
-    if (info.enabled) {
-      str += mouseEventsString;
-    }
-    if (info.icon) {
-      str += 'style="background-image: url(' + info.icon + ')" ';
-    }
-    str += '>';
-    if (info.badge) {
-      str += '<div class="baBadge"'
-      if (info.badgeBackgroundColor) {
-        str += 'style="background-color:' + info.badgeBackgroundColor + '" ';
+      if (aTabSpecific) {
+        for (var attrname in aTabSpecific) {
+          info[attrname] = aTabSpecific[attrname];
+        }
       }
-      str += '>' + info.badge + '</div>';
+      return info;
     }
-    str += '</div>';
 
-    return str;
-  }
 
-  var browserActions = {};
+    function getButtonCode(aId) {
+      var info = mergeTabSpecifics(browserActions[aId].globalInfo, browserActions[aId].tabSpecificInfo[browserTabID]);
 
-  function updateBrowserActions() {
-    var buttonsCode = '';
-    for (var i in browserActions) {
-      buttonsCode += getButtonCode(browserActions[i].id);
+      var str = '<div class="baButton" id=\"' + aId + '\" ';
+      if (info.title) {
+        str += 'title=' + '\"' + info.title + '\"';
+      }
+      if (info.enabled) {
+        str += mouseEventsString;
+      }
+      if (info.icon) {
+        str += 'style="background-image: url(' + info.icon + ')" ';
+      }
+      str += '>';
+      if (info.badge) {
+        str += '<div class="baBadge"'
+        if (info.badgeBackgroundColor) {
+          str += 'style="background-color:' + info.badgeBackgroundColor + '" ';
+        }
+        str += '>' + info.badge + '</div>';
+      }
+      str += '</div>';
+
+      return str;
     }
-    var buttonBar = document.getElementById('buttonBar');
-    if (!buttonBar) {
-      throw new Error('Couldn\'t locate buttonBar.');
+
+    var browserActions = {};
+
+    function updateBrowserActions() {
+      var buttonsCode = '';
+      for (var i in browserActions) {
+        buttonsCode += getButtonCode(browserActions[i].id);
+      }
+      var buttonBar = document.getElementById('buttonBar');
+      if (!buttonBar) {
+        throw new Error('Couldn\'t locate buttonBar.');
+      }
+      buttonBar.innerHTML = buttonsCode;
     }
-    buttonBar.innerHTML = buttonsCode;
-  }
 
-	function initBrowserActions() {
-	  var browserActionsArray = external.getBrowserActions();
+    function initBrowserActions() {
+      var browserActionsArray = external.getBrowserActions();
 
-	  if (!browserActionsArray) {
-	    alert("Failed browserAction toolbar setup.");
-	    return;
-	  }
-    var actions = {};
-    for (var i = 0; i < browserActionsArray.length; ++i) {
-      actions[browserActionsArray[i].id] = browserActionsArray[i];
+      if (!browserActionsArray) {
+        alert("Failed browserAction toolbar setup.");
+        return;
+      }
+      var actions = {};
+      for (var i = 0; i < browserActionsArray.length; ++i) {
+        actions[browserActionsArray[i].id] = browserActionsArray[i];
+      }
+      browserActions = actions;
+      updateBrowserActions();
     }
-    browserActions = actions;
-    updateBrowserActions();
-  }
-  var callbackID = undefined;
-  var browserTabID = undefined;
+    var callbackID = undefined;
+    var browserTabID = undefined;
 
-  function initBrowserActionPage(aBrowserTabID) {
-    browserTabID = aBrowserTabID;
-    callbackID = external.setBrowserActionUpdateCallback(browserTabID, initBrowserActions);
-    window.onload = initBrowserActions;
-  }
+    function initBrowserActionPage(aBrowserTabID) {
+      browserTabID = aBrowserTabID;
+      callbackID = external.setBrowserActionUpdateCallback(browserTabID, initBrowserActions);
+      window.onload = initBrowserActions;
+    }
   </script>
+
 </head>
 <body>
-  <div id="buttonBar"></div>
+  <div id="buttonBar">
+  </div>
 </body>
 </html>
