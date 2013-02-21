@@ -536,23 +536,28 @@ STDMETHODIMP CAnchoAddonService::getCurrentWindowId(INT *aWinId)
   return E_FAIL;
 }
 
+
 //----------------------------------------------------------------------------
 //
 HWND CAnchoAddonService::getCurrentWindowHWND()
 {
+  std::vector<HWND> ieFrames;
   HWND hIEFrame = NULL;
   while(hIEFrame = ::FindWindowEx(NULL, hIEFrame, L"IEFrame", NULL)) {
-    WINDOWINFO winInfo;
-    winInfo.cbSize = sizeof(WINDOWINFO);
-    BOOL res = GetWindowInfo(hIEFrame, &winInfo);
-    if (!res) {
-      continue;
-    }
-    if (winInfo.dwWindowStatus & WS_ACTIVECAPTION) {
-      return hIEFrame;
-    }
+    ieFrames.push_back(hIEFrame);
   }
-  return NULL;
+
+  if (ieFrames.empty()) {
+    return NULL;
+  }
+
+  if (ieFrames.size() == 1) {
+    return ieFrames.front();
+  }
+
+  std::vector<HWND>::const_iterator it = std::min_element(ieFrames.begin(), ieFrames.end(), ZOrderComparator());
+  ATLASSERT(it != ieFrames.end());
+  return *it;
 }
 //----------------------------------------------------------------------------
 //
