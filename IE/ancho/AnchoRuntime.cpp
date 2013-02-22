@@ -97,7 +97,6 @@ HRESULT CAnchoRuntime::Cleanup()
 HRESULT CAnchoRuntime::Init()
 {
   ATLASSERT(m_spUnkSite);
-
   // get IServiceProvider to get IWebBrowser2 and IOleWindow
   CComQIPtr<IServiceProvider> pServiceProvider = m_spUnkSite;
   if (!pServiceProvider)

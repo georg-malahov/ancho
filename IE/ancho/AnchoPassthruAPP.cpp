@@ -455,7 +455,8 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
       IF_FAILED_RET(browser->get_LocationURL(&topLevelUrl));
       // If we're refreshing then the sink won't know it is a frame, and the URL
       // will match the one already loaded into the browser.
-      m_IsRefreshingMainFrame = !(pSink->IsFrame()) && (topLevelUrl == bstrUrl);
+      std::wstring strippedTopLevelUrl = stripFragmentFromUrl(std::wstring(topLevelUrl.m_str));
+      m_IsRefreshingMainFrame = !(pSink->IsFrame()) && (strippedTopLevelUrl == std::wstring(bstrUrl.m_str));
 
       // We only want to handle the top-level request and any frames, not subordinate
       // requests like images. Usually the desired requests will have a bind context,
