@@ -24,7 +24,27 @@ std::wstring getDomainName(const std::wstring &aUrl)
 
   return aUrl.substr(domainStart, domainEnd-domainStart);
 }
+//----------------------------------------------------------------------------
+//
+std::wstring stringFromCLSID(const CLSID &aCLSID)
+{
+  LPOLESTR lpolestr;
+  IF_FAILED_THROW(::StringFromCLSID(aCLSID, &lpolestr));
+  std::wstring tmp(lpolestr);
+  CoTaskMemFree(lpolestr);
+  return tmp;
+};
+//----------------------------------------------------------------------------
+//
+std::wstring stringFromGUID2(const GUID &aGUID)
+{
+  wchar_t guid[1024] = {0};
+  IF_FAILED_THROW(::StringFromGUID2( aGUID, (OLECHAR*)guid, sizeof(guid)));
+  return std::wstring(guid);
+};
 
+//----------------------------------------------------------------------------
+//
 typedef HRESULT (WINAPI* fGetKnownFolderPath)(REFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken, PWSTR *path);
 
 std::wstring getSystemPathWithFallback(REFKNOWNFOLDERID aKnownFolderID, int aCLSID)

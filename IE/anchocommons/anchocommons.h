@@ -24,6 +24,19 @@ bool isExtensionPage(const std::wstring &aUrl);
 std::wstring getDomainName(const std::wstring &aUrl);
 std::wstring getSystemPathWithFallback(REFKNOWNFOLDERID aKnownFolderID, int aCLSID);
 
+std::wstring stringFromCLSID(const CLSID &aCLSID);
+std::wstring stringFromGUID2(const GUID &aGUID);
+
+
+inline std::wstring stripFragmentFromUrl(std::wstring aUrl)
+{
+  size_t pos = aUrl.find_first_of(L'#');
+  if (pos != std::wstring::npos) {
+    aUrl.erase(pos);
+  }
+  return aUrl;
+}
+
 inline int getWindowZOrder(HWND hWnd)
 {
     int z = 0;
