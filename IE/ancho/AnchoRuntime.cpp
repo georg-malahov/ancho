@@ -57,7 +57,6 @@ HRESULT CAnchoRuntime::InitAddons()
     }
     dwLen = 4096;
   }
-
   return S_OK;
 }
 
@@ -80,6 +79,7 @@ void CAnchoRuntime::DestroyAddons()
   {
     m_pWebBrowser.Release();
   }
+  ATLTRACE(L"ANCHO: all addons destroyed for runtime %d\n", m_TabID);
 }
 
 //----------------------------------------------------------------------------
@@ -97,7 +97,6 @@ HRESULT CAnchoRuntime::Cleanup()
 HRESULT CAnchoRuntime::Init()
 {
   ATLASSERT(m_spUnkSite);
-
   // get IServiceProvider to get IWebBrowser2 and IOleWindow
   CComQIPtr<IServiceProvider> pServiceProvider = m_spUnkSite;
   if (!pServiceProvider)
@@ -113,11 +112,12 @@ HRESULT CAnchoRuntime::Init()
 
   AtlAdvise(m_pWebBrowser, (IUnknown *)(TWebBrowserEvents *) this, DIID_DWebBrowserEvents2, &m_WebBrowserEventsCookie);
 
+  ATLTRACE(L"ANCHO: runtime initialization - CoCreateInstace(CLSID_AnchoAddonService)\n");
   // create addon service object
   IF_FAILED_RET(m_pAnchoService.CoCreateInstance(CLSID_AnchoAddonService));
 
   // Registering tab in service - obtains tab id and assigns it to the tab as property
-  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, &m_TabID));
+  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, m_HeartBeatSlave.id(), &m_TabID));
   HWND hwnd;
   m_pWebBrowser->get_HWND((long*)&hwnd);
   ::SetProp(hwnd, s_AnchoTabIDPropertyName, (HANDLE)m_TabID);
@@ -133,6 +133,7 @@ HRESULT CAnchoRuntime::Init()
   // Set the sink as property of the browser so it can be retrieved if someone wants to send
   // us events.
   IF_FAILED_RET(m_pWebBrowser->PutProperty(L"_anchoBrowserEvents", CComVariant(m_pBrowserEventSource)));
+  ATLTRACE(L"ANCHO: runtime %d initialized\n", m_TabID);
   return S_OK;
 }
 
@@ -153,7 +154,7 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserProgressChange(LONG Progress, LONG P
     if (readyState == READYSTATE_INTERACTIVE) {
       CComBSTR url;
       m_pWebBrowser->get_LocationURL(&url);
-      if (SUCCEEDED(InitializeExtensionScripting(url))) {
+      if (S_OK == InitializeExtensionScripting(url)) {
         m_ExtensionPageAPIPrepared = true;
       }
     }
@@ -165,13 +166,13 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserProgressChange(LONG Progress, LONG P
 STDMETHODIMP_(void) CAnchoRuntime::OnNavigateComplete(LPDISPATCH pDispatch, VARIANT *URL)
 {
   CComBSTR url(URL->bstrVal);
-  if (isExtensionPage(std::wstring(url))) {
-    m_IsExtensionPage = true;
-    /* Too early for api injections
-    if (SUCCEEDED(InitializeExtensionScripting(url))) {
+  m_IsExtensionPage = isExtensionPage(std::wstring(url));
+  /*if (m_IsExtensionPage) {
+    // Too early for api injections
+    if (S_OK == InitializeExtensionScripting(url)) {
       m_ExtensionPageAPIPrepared = true;
-    }*/
-  }
+    }
+  }*/
 }
 
 //----------------------------------------------------------------------------
@@ -179,10 +180,22 @@ STDMETHODIMP_(void) CAnchoRuntime::OnNavigateComplete(LPDISPATCH pDispatch, VARI
 STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VARIANT *pURL, VARIANT *Flags,
   VARIANT *TargetFrameName, VARIANT *PostData, VARIANT *Headers, BOOL *Cancel)
 {
+  static bool bFirstRun = true;
+
   // Add the frame to the frames map so we can retrieve the IWebBrowser2 object using the URL.
   ATLASSERT(pURL->vt == VT_BSTR && pURL->bstrVal != NULL);
   CComQIPtr<IWebBrowser2> pWebBrowser(pDisp);
   ATLASSERT(pWebBrowser != NULL);
+
+  // Workaround to ensure that first request goes through PAPP
+  if (bFirstRun) {
+    bFirstRun = false;
+    *Cancel = TRUE;
+    pWebBrowser->Stop();
+    pWebBrowser->Navigate2(pURL, Flags, TargetFrameName, PostData, Headers);
+    return;
+  }
+
   VARIANT_BOOL isTop;
   if (SUCCEEDED(pWebBrowser->get_TopLevelContainer(&isTop))) {
     if (isTop) {
@@ -192,7 +205,7 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
   }
   CComBSTR bstrUrl;
   removeUrlFragment(pURL->bstrVal, &bstrUrl);
-  m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop);
+  m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop != VARIANT_FALSE);
 
   // Check if this is a new tab we are creating programmatically.
   // If so redirect it to the correct URL.
@@ -444,7 +457,7 @@ HRESULT CAnchoRuntime::InitializeExtensionScripting(BSTR bstrUrl)
   if (it != m_Addons.end()) {
     return it->second->InitializeExtensionScripting(bstrUrl);
   }
-  return S_OK;
+  return S_FALSE;
 }
 
 //----------------------------------------------------------------------------
@@ -463,6 +476,7 @@ STDMETHODIMP CAnchoRuntime::SetSite(IUnknown *pUnkSite)
   else
   {
     DestroyAddons();
+    Cleanup();
   }
   return hr;
 }

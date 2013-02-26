@@ -13,10 +13,10 @@
 CString lastErrorMessage(const DWORD& dwErrorCode)
 {
 	LPTSTR lpErrorText = NULL;
- 
-	::FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER, 
+
+	::FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
 		0, dwErrorCode, 0, lpErrorText, MAX_PATH, 0 );
- 
+
   CString msg = lpErrorText;
 	::LocalFree( lpErrorText );
   return msg;
@@ -56,12 +56,14 @@ CIECookieManager::ParseBuffer::operator void * ()
 }
 
 HRESULT CIECookieManager::GetCookieFolder(CString& sPath) {
-  HRESULT hr = SHGetFolderPath(NULL, CSIDL_COOKIES, NULL, SHGFP_TYPE_CURRENT, sPath.GetBuffer(MAX_PATH));
-  sPath.ReleaseBuffer();
-  IF_FAILED_RET(hr);
+
+  std::wstring path;
+  IF_THROW_RET(path = getSystemPathWithFallback(FOLDERID_Cookies, CSIDL_COOKIES));
+  sPath = path.c_str();
   sPath += _T('\\');
   return S_OK;
 }
+
 HRESULT CIECookieManager::ParseCookies(ParseBuffer & parseBuffer, size_t sLen, CCookieArray & cookies) {
   // parse cookies
   char * pStart = parseBuffer;
@@ -298,7 +300,7 @@ HRESULT CIECookieManager::OnCookieFileChanged(LPCTSTR lpszFileName) {
   }
   return S_OK;
 }
-//STDMETHODIMP CIECookieManager::put_cookiesChangedCallback(LPDISPATCH apOnCookiesChangedCallback) 
+//STDMETHODIMP CIECookieManager::put_cookiesChangedCallback(LPDISPATCH apOnCookiesChangedCallback)
 void CIECookieManager::startWatching()
 {
   _beginthread(CIECookieManager::FileWatcher, 0,this);

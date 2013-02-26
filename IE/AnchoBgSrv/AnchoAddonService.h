@@ -13,12 +13,12 @@
 #include "IECookieManager.h"
 #include "CommandQueue.h"
 #include "XmlHttpRequest.h"
-#include <SimpleWrappers.h>
 
 #if defined(_WIN32_WCE) && !defined(_CE_DCOM) && !defined(_CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA)
 #error "Single-threaded COM objects are not properly supported on Windows CE platform, such as the Windows Mobile platforms that do not include full DCOM support. Define _CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA to force ATL to support creating single-thread COM object's and allow use of it's single-threaded COM object implementations. The threading model in your rgs file was set to 'Free' as that is the only threading model supported in non DCOM Windows CE platforms."
 #endif
 
+class CAnchoAddonService;
 /*============================================================================
  * class CAnchoAddonServiceCallback
  */
@@ -26,6 +26,84 @@ struct CAnchoAddonServiceCallback
 {
   virtual void OnAddonFinalRelease(BSTR bsID) = 0;
 };
+
+/*============================================================================
+ * class ServiceTimer
+ */
+struct ServiceTimer
+{
+  typedef void (CAnchoAddonService::*ServiceMethod)();
+
+  static void CALLBACK callback(void *aParameter, BOOLEAN aTimerOrWaitFired)
+  {
+    ServiceTimer *timer = reinterpret_cast<ServiceTimer*>(aParameter);
+    if (timer) {
+      ATLASSERT(timer->mServiceInstance);
+      ATLASSERT(timer->mMethod);
+
+      (timer->mServiceInstance->*(timer->mMethod))();
+    }
+  }
+
+  ServiceTimer()
+    : mTimerHandle(NULL), mTimerQueue(NULL), mPeriod(0), mMethod(NULL), mServiceInstance(NULL)
+  {}
+
+  ~ServiceTimer()
+  {
+    finalize();
+  }
+
+  void initialize(ServiceMethod aMethod, CAnchoAddonService *aInstance, unsigned long aPeriodMS, HANDLE aTimerQueue = NULL)
+  {
+    finalize();
+
+    if (!aMethod || !aInstance) {
+      ATLASSERT(false);
+      //Ancho_THROW();
+    }
+
+    mMethod = aMethod;
+    mServiceInstance = aInstance;
+
+    mTimerQueue = aTimerQueue;
+    mPeriod = aPeriodMS;
+
+    if (!CreateTimerQueueTimer(
+      &mTimerHandle,
+      mTimerQueue,
+      (WAITORTIMERCALLBACK) &ServiceTimer::callback,
+      (void*) this,
+      aPeriodMS,
+      aPeriodMS,
+      WT_EXECUTEDEFAULT
+      ))
+    {
+      ATLASSERT(false);
+      //ANCHO_THROW();
+    }
+  }
+
+  bool isRunning() const
+  {
+    return mTimerHandle != NULL;
+  }
+
+  void finalize()
+  {
+    if (isRunning()) {
+      DeleteTimerQueueTimer(mTimerQueue, mTimerHandle, NULL);
+    }
+  }
+
+  HANDLE mTimerHandle;
+  HANDLE mTimerQueue;
+  unsigned long mPeriod;
+
+  ServiceMethod mMethod;
+  CAnchoAddonService *mServiceInstance;
+};
+
 
 /*============================================================================
  * class CAnchoAddonService
@@ -40,7 +118,7 @@ class ATL_NO_VTABLE CAnchoAddonService :
 public:
   // -------------------------------------------------------------------------
   // ctor
-  CAnchoAddonService(): m_NextTabID(1), m_NextRequestID(1)
+  CAnchoAddonService(): m_NextTabID(1), m_NextRequestID(1), mShouldCheckBHOConnections(false)
   {
   }
 
@@ -116,7 +194,7 @@ public:
   // IAnchoAddonService methods. See .idl for description.
   STDMETHOD(GetAddonBackground)(BSTR bsID, IAnchoAddonBackground ** ppRet);
   STDMETHOD(GetModulePath)(BSTR * pbsPath);
-  STDMETHOD(registerRuntime)(INT aFrameTab, IAnchoRuntime * aRuntime, INT *aTabID);
+  STDMETHOD(registerRuntime)(INT aFrameTab, IAnchoRuntime * aRuntime, ULONG aHeartBeat, INT *aTabID);
   STDMETHOD(unregisterRuntime)(INT aTabID);
   STDMETHOD(createTabNotification)(INT aTabID, INT aRequestID);
   STDMETHOD(invokeEventObjectInAllExtensions)(BSTR aEventName, LPDISPATCH aArgs, VARIANT* aRet);
@@ -168,6 +246,31 @@ private:
 
   HRESULT FindActiveBrowser(IWebBrowser2** webBrowser);
 private:
+    //Private type declarations
+  struct RuntimeRecord {
+    RuntimeRecord(IAnchoRuntime *aRuntime = NULL, unsigned long aHeartbeatId = 0)
+      : runtime(aRuntime), hearbeatMaster(aHeartbeatId) {}
+
+    CComPtr<IAnchoRuntime> runtime;
+    CIDispatchHelper callback;
+    HeartbeatMaster hearbeatMaster;
+  };
+  typedef std::map<int, RuntimeRecord> RuntimeMap;
+
+  class CreateTabCommand;
+  class CreateWindowCommand;
+
+  typedef std::map<int, int> FrameTabToTabIDMap;
+
+  // a map containing all addon background objects - one per addon
+  typedef std::map<std::wstring, CAnchoAddonBackgroundComObject*> BackgroundObjectsMap;
+  typedef std::map<int, CIDispatchHelper> BrowserActionCallbackMap;
+
+  typedef CComCritSecLock<CComAutoCriticalSection> CSLock;
+private:
+  //private methods
+  void checkBHOConnections();
+
   IAnchoRuntime &getRuntime(int aTabId)
   {
     RuntimeMap::iterator it = m_Runtimes.find(aTabId);
@@ -176,46 +279,32 @@ private:
     }
     return *(it->second.runtime);
   }
-  //Private type declarations
-  struct RuntimeRecord {
-    RuntimeRecord(IAnchoRuntime *aRuntime = NULL)
-      : runtime(aRuntime) {}
-    CComPtr<IAnchoRuntime> runtime;
-    CIDispatchHelper callback;
-  };
-  typedef std::map<int, RuntimeRecord> RuntimeMap;
 
-  class CreateTabCommand;
-  class CreateWindowCommand;
 
 private:
   // -------------------------------------------------------------------------
   // Private members.
 
-  typedef std::map<int, int> FrameTabToTabIDMap;
 
-  // a map containing all addon background objects - one per addon
-  typedef std::map<std::wstring, CAnchoAddonBackgroundComObject*> BackgroundObjectsMap;
-  BackgroundObjectsMap  m_BackgroundObjects;
+  BackgroundObjectsMap          m_BackgroundObjects;
+  RuntimeMap                    m_Runtimes;
+  CComAutoCriticalSection       mRuntimesCriticalSection;
+  volatile bool                 mShouldCheckBHOConnections;
 
-  RuntimeMap  m_Runtimes;
-  CreateTabCallbackMap m_CreateTabCallbacks;
+  CreateTabCallbackMap          m_CreateTabCallbacks;
+  CComPtr<ComSimpleJSArray>     m_BrowserActionInfos;
+  BrowserActionCallbackMap      m_BrowserActionCallbacks;
+  FrameTabToTabIDMap            m_FrameTabIds;
+  CommandQueue                  m_WebBrowserPostInitTasks;
+  ServiceTimer                  mBHOHeartbeatTimer;
 
   // Path to this exe and also to magpie.
-  CString             m_sThisPath;
+  CString                       m_sThisPath;
 
-  CComPtr<IIECookieManager> m_Cookies;
+  CComPtr<IIECookieManager>     m_Cookies;
 
-  int     m_NextTabID;
-  int     m_NextRequestID;
-
-  CommandQueue m_WebBrowserPostInitTasks;
-
-  FrameTabToTabIDMap m_FrameTabIds;
-
-  typedef std::map<int, CIDispatchHelper> BrowserActionCallbackMap;
-  CComPtr<ComSimpleJSArray> m_BrowserActionInfos;
-  BrowserActionCallbackMap m_BrowserActionCallbacks;
+  int                           m_NextTabID;
+  int                           m_NextRequestID;
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(AnchoAddonService), CAnchoAddonService)
