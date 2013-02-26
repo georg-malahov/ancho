@@ -62,7 +62,7 @@
     exposeProperties(this.ancho);
 
     this.console = new ConsoleAPI(extensionState, contentWindow);
-
+    exposeProperties(this.console);
   }
 
   module.exports = API;

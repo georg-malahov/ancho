@@ -18,6 +18,7 @@
       var api = new API(window, ExtensionState);
       window.chrome = api.chrome;
       window.ancho = api.ancho;
+      window.console = api.console;
 
       window.addEventListener('unload', function(event) {
         window.removeEventListener('unload', arguments.callee, false);
