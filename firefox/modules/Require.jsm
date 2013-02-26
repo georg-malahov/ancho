@@ -11,7 +11,7 @@ function WrappedXMLHttpRequest() {
 WrappedXMLHttpRequest.prototype = {
   get responseXML() { return this._inner.responseXML; },
   get responseText() { return this._inner.responseText; },
-  get status() { return this._inner.status; },
+  get status() { return this._inner.status ? this._inner.status: 200; },
   get statusText() { return this._inner.statusText; },
   getAllResponseHeaders: function() { return this._inner.getAllResponseHeaders(); },
   getResponseHeader: function(header) { return this._inner.getResponseHeader(header); },
@@ -28,6 +28,8 @@ var Require = {
   _resProtocolHandler: Services.io.getProtocolHandler("resource"),
 
   moduleSearchPath: [],
+
+  XMLHttpRequest: WrappedXMLHttpRequest,
 
   createWrappedXMLHttpRequest: function() { return new WrappedXMLHttpRequest(); },
 

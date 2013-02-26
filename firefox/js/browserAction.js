@@ -83,7 +83,7 @@
       var panel = document.createElement("panel");
       var iframe = document.createElement("iframe");
       iframe.setAttribute('type', 'chrome');
-      iframe.flex = 1;
+
       toolbarButton.appendChild(panel);
       panel.appendChild(iframe);
 
@@ -92,22 +92,11 @@
       this.setIcon(window, this.currentIcon, true);
     },
 
-    clickHandler: function(event) {
-      if (!event.target || event.target.tagName !== "toolbarbutton") {
-        // Only react when button itself is clicked (i.e. not the panel).
-        return;
-      }
-      var document = event.target.ownerDocument;
-      var toolbarButton = event.target;
-      var panel = toolbarButton.firstChild;
-      var iframe = panel.firstChild;
-      iframe.setAttribute('src', 'about:blank');
-      panel.openPopup(toolbarButton, "after_start", 0, 0, false, false);
-
+    showPopup: function(panel, iframe, document) {
       // Deferred loading of scripting.js since we have a circular reference that causes
       // problems if we load it earlier.
       var loadHtml = require('./scripting').loadHtml;
-      loadHtml(document, iframe, Config.hostExtensionRoot + Config.browser_action.default_popup, function() {
+      loadHtml(document, iframe, "chrome-extension://ancho/" + Config.browser_action.default_popup, function() {
         var body = iframe.contentDocument.body;
         // We need to intercept link clicks and open them in the current browser window.
         body.addEventListener("click", function(event) {
@@ -129,13 +118,12 @@
 
         function resizePopup() {
           if (body.scrollHeight !== oldHeight && body.scrollWidth !== oldWidth) {
-            oldHeight = panel.height = iframe.height =
-              (body.scrollHeight + getPanelBorderWidth('Top') + getPanelBorderWidth('Bottom'));
-            oldWidth = panel.width = iframe.width =
-              (body.scrollWidth + getPanelBorderWidth('Left') + getPanelBorderWidth('Right'));
+            oldHeight = iframe.height = (body.scrollHeight + 1);
+            panel.height = oldHeight + getPanelBorderWidth('Top') + getPanelBorderWidth('Bottom');
+            oldWidth = iframe.width = (body.scrollWidth + 1);
+            panel.width = oldWidth + getPanelBorderWidth('Left') + getPanelBorderWidth('Right');
           }
         }
-        resizePopup();
 
         iframe.contentDocument.addEventListener('MozScrolledAreaChanged', function(event) {
           resizePopup();
@@ -144,6 +132,24 @@
           panel.hidePopup();
         };
       });
+    },
+
+    clickHandler: function(event) {
+      if (!event.target || event.target.tagName !== "toolbarbutton") {
+        // Only react when button itself is clicked (i.e. not the panel).
+        return;
+      }
+      var self = this;
+      var toolbarButton = event.target;
+      var panel = toolbarButton.firstChild;
+      var iframe = panel.firstChild;
+      var document = event.target.ownerDocument;
+      iframe.setAttribute('src', 'about:blank');
+      panel.addEventListener('popupshown', function(event) {
+        panel.removeEventListener('popupshown', arguments.callee, false);
+        self.showPopup(panel, iframe, document);
+      }, false);
+      panel.openPopup(toolbarButton, "after_start", 0, 0, false, false);
     },
 
     setIcon: function(window, iconUrl, notAttach) {

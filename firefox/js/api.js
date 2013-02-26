@@ -19,6 +19,21 @@
   // System APIs
   var ConsoleAPI = require('./console');
 
+  function exposeProperties(obj) {
+    var exposedProps = {};
+    for (prop in obj) {
+      if (prop && prop[0] == '_') {
+        // By convention, prefixing with a slash means private property.
+        continue;
+      }
+      exposedProps[prop] = "r";
+      if ('object' === typeof(obj[prop])) {
+        exposeProperties(obj[prop]);
+      }
+    }
+    obj.__exposedProps__ = exposedProps;
+  }
+
   // export
   function API(contentWindow, extensionState) {
 
@@ -37,12 +52,14 @@
         sync: new StorageAPI(extensionState, contentWindow, 'sync')
       }
     };
+    exposeProperties(this.chrome);
 
     this.ancho = {
       toolbar: new ToolbarAPI(extensionState, contentWindow),
       clipboard: new ClipboardAPI(extensionState, contentWindow),
       external: new ExternalAPI(extensionState, contentWindow)
     };
+    exposeProperties(this.ancho);
 
     this.console = new ConsoleAPI(extensionState, contentWindow);
 

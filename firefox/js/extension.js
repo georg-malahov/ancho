@@ -5,6 +5,7 @@
   var Cu = Components.utils;
 
   Cu.import('resource://gre/modules/Services.jsm');
+  Cu.import("resource://gre/modules/NetUtil.jsm");
 
   var Utils = require('./utils');
   var Event = require('./event');
@@ -40,18 +41,9 @@
     },
 
     getURL: function(path) {
-      // RequireJS uses extension.getUrl() in require.load(),
-      // we need to strip the /content/chrome-ext prefix here.
-      if (0 === path.indexOf(Config.hostExtensionPath)) {
-        path = path.substr(Config.hostExtensionPath.length);
-      }
-      // Treat all paths as relative so they are resolved from the root URI.
-      if (path[0] === '/') {
-        path = path.substr(1);
-      }
-      var baseURI = Services.io.newURI(Config.hostExtensionRoot, '', null);
-      var uri = Services.io.newURI(path, '', baseURI);
-      return uri.spec;
+      var baseURI = NetUtil.newURI('chrome-extension://ancho/', null, null);
+      var URI = NetUtil.newURI(path, null, baseURI);
+      return URI.spec;
     }
   };
 
