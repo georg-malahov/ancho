@@ -1,3 +1,4 @@
 content ancho             ./  contentaccessible=yes
 skin    ancho classic/1.0 ./skin
 locale  ancho en-US       ./locale/en-US/
+

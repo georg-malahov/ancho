@@ -69,6 +69,15 @@ function setResourceSubstitution(addon) {
   resourceProtocol.setSubstitution('ancho', addon.getResourceURI('/'));
 }
 
+function matchPatternToRegexp(matchPattern) {
+  // TODO: Implement this according to the spec.
+  // Each section (scheme, host, etc.) should be compared individually.
+  return matchPattern
+    .replace('<all_urls>', '*')
+    .replace(/\./g, '\\.')
+    .replace(/\*/g, '.*')
+}
+
 function loadConfig(addon, firstRun) {
   // Load the manifest
   Cu.import('resource://ancho/modules/Require.jsm');
@@ -101,15 +110,10 @@ function loadConfig(addon, firstRun) {
         var matches = [];
         for (var j=0; j<scriptInfo.matches.length; j++) {
           // Convert from Google's simple wildcard syntax to a proper regular expression
-          matches.push(
-            scriptInfo.matches[j]
-              .replace('<all_urls>', '*')
-              .replace(/\./g, '\\.')
-              .replace(/\*/g, '.*')
-          );
+          matches.push(matchPatternToRegexp(scriptInfo.matches[j]));
         }
         var js = [];
-        for (var j=0; j<scriptInfo.js.length; j++) {
+        for (j=0; j<scriptInfo.js.length; j++) {
           js.push(scriptInfo.js[j]);
         }
         Config.contentScripts.push({
@@ -124,7 +128,7 @@ function loadConfig(addon, firstRun) {
         Config.backgroundPage = bg.page;
       }
       if (bg.scripts) {
-        for (var i=0; i<bg.scripts.length; i++) {
+        for (i=0; i<bg.scripts.length; i++) {
           Config.backgroundScripts.push(bg.scripts[i]);
         }
       }
@@ -133,6 +137,13 @@ function loadConfig(addon, firstRun) {
       Config.browser_action = {
         default_icon : config.browser_action.default_icon,
         default_popup : config.browser_action.default_popup
+      }
+    }
+    if (config.web_accessible_resources) {
+      for (i=0; i<config.web_accessible_resources.length; i++) {
+        Config.webAccessibleResources.push(
+          matchPatternToRegexp(config.web_accessible_resources[i])
+        );
       }
     }
   } // has manifest.json?

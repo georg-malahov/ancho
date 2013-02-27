@@ -16,6 +16,8 @@
     backgroundScripts: [],
     // Filename of HTML to load into background window.
     backgroundPage: null,
+    // Patterns for resources that can be accessed from content pages.
+    webAccessibleResources: [],
     // Init function for calculated values.
     _init: function() {
       // A URL prefix to hosted browser extesnion code.
