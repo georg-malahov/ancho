@@ -1,6 +1,12 @@
 cmake_minimum_required (VERSION 2.8.10)  #required for extended generator expressions in add_custom_command
 project (AnchoBgSrv)
 
+option(${PROJECT_NAME}_DISABLE_LOGWINDOW "Disable log window" OFF)
+
+if(${${PROJECT_NAME}_DISABLE_LOGWINDOW})
+  add_definitions(-DANCHO_DISABLE_LOGWINDOW)
+endif(${${PROJECT_NAME}_DISABLE_LOGWINDOW})
+
 set(CMAKE_CONFIGURATION_TYPES Debug Release )
 set(CMAKE_CONFIGURATION_TYPES "${CMAKE_CONFIGURATION_TYPES}" CACHE STRING "Reset the configurations to those we need" FORCE)
 

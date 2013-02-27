@@ -39,8 +39,10 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
   // set service API inteface
   m_ServiceApi = pServiceApi;
 
+#ifndef ANCHO_DISABLE_LOGWINDOW
   // create logger window
   IF_FAILED_RET(CLogWindow::CreateLogWindow(&m_LogWindow.p));
+#endif //ANCHO_DISABLE_LOGWINDOW
 
   // create a magpie instance
 #ifdef MAGPIE_REGISTERED
@@ -71,8 +73,10 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
   // add a loder for scripts in this exe file
   IF_FAILED_RET(m_Magpie->AddResourceScriptLoader((ULONG)_AtlModule.GetResourceInstance()));
 
+#ifndef ANCHO_DISABLE_LOGWINDOW
   // advise logger
   IF_FAILED_RET(AtlAdvise(m_Magpie, (IUnknown*)(CAnchoAddonBackgroundLogger*)(this), DIID__IMagpieLoggerEvents, &m_dwMagpieSinkCookie));
+#endif //ANCHO_DISABLE_LOGWINDOW
 
   // load manifest
   CString sManifestFilename;
