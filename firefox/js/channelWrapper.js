@@ -4,7 +4,7 @@
 
   function ChannelWrapper(channel) {
     this._channel = channel;
-    this._propertyBag = channel ? channel.QueryInterface(Ci.nsIWritablePropertyBag2) : null;
+    this._propertyBag = channel.QueryInterface(Ci.nsIWritablePropertyBag2);
     this._listener = null;
   };
 
@@ -63,18 +63,18 @@
 
     // nsIStreamListener
     onDataAvailable: function(aRequest, aContext, aInputStream, aOffset, aCount) {
-      let request = (aRequest == this._channel) ? this : aRequest;
+      let request = (aRequest === this._channel) ? this : aRequest;
       this._listener.onDataAvailable(request, aContext, aInputStream, aOffset, aCount);
     },
 
     // nsIRequestObserver
     onStartRequest: function(aRequest, aContext) {
-      let request = (aRequest == this._channel) ? this : aRequest;
+      let request = (aRequest === this._channel) ? this : aRequest;
       this._listener.onStartRequest(request, aContext);
     },
 
     onStopRequest: function(aRequest, aContext, aStatusCode) {
-      let request = (aRequest == this._channel) ? this : aRequest;
+      let request = (aRequest === this._channel) ? this : aRequest;
       this._listener.onStopRequest(request, aContext, aStatusCode);
     },
 
