@@ -541,23 +541,8 @@ STDMETHODIMP CAnchoAddonService::getCurrentWindowId(INT *aWinId)
 //
 HWND CAnchoAddonService::getCurrentWindowHWND()
 {
-  std::vector<HWND> ieFrames;
-  HWND hIEFrame = NULL;
-  while(hIEFrame = ::FindWindowEx(NULL, hIEFrame, L"IEFrame", NULL)) {
-    ieFrames.push_back(hIEFrame);
-  }
-
-  if (ieFrames.empty()) {
-    return NULL;
-  }
-
-  if (ieFrames.size() == 1) {
-    return ieFrames.front();
-  }
-
-  std::vector<HWND>::const_iterator it = std::min_element(ieFrames.begin(), ieFrames.end(), ZOrderComparator());
-  ATLASSERT(it != ieFrames.end());
-  return *it;
+  //FindWindowEx returns windows in z-order - the first one is also the top one
+  return ::FindWindowEx(NULL, NULL, L"IEFrame", NULL);
 }
 //----------------------------------------------------------------------------
 //
