@@ -34,7 +34,14 @@
     for (var i=0; i<contentScripts.length; i++) {
       var scriptInfo = contentScripts[i];
       var matches = scriptInfo.matches;
-      var principal = CC('@mozilla.org/systemprincipal;1', 'nsIPrincipal')();
+      var principal;
+      // Preserving backwards compatibility with FF18 and older.
+      if (Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo).version.split('.')[0] >= 19) {
+        principal = CC('@mozilla.org/systemprincipal;1', 'nsIPrincipal')();
+      }
+      else {
+        principal = ExtensionState.backgroundWindow;
+      }
       var sandbox = Cu.Sandbox(principal, { sandboxPrototype: win });
       var api = new API(win, ExtensionState);
       sandbox.chrome = api.chrome;
