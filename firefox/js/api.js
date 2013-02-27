@@ -21,12 +21,12 @@
 
   function exposeProperties(obj) {
     var exposedProps = {};
-    for (prop in obj) {
-      if (prop && prop[0] == '_') {
+    for (var prop in obj) {
+      if (prop && prop[0] === '_') {
         // By convention, prefixing with a slash means private property.
         continue;
       }
-      exposedProps[prop] = "r";
+      exposedProps[prop] = 'r';
       if ('object' === typeof(obj[prop])) {
         exposeProperties(obj[prop]);
       }
