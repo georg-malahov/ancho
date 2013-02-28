@@ -131,11 +131,13 @@ void CAnchoBackgroundAPI::UnInit()
   }
   if (m_Magpie)
   {
+#ifndef ANCHO_DISABLE_LOGWINDOW
     if (m_dwMagpieSinkCookie)
     {
       AtlUnadvise(m_Magpie, DIID__IMagpieLoggerEvents, m_dwMagpieSinkCookie);
       m_dwMagpieSinkCookie = 0;
     }
+#endif
     m_Magpie->Shutdown();
     m_Magpie.Release();
   }
