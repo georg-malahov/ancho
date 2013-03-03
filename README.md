@@ -1,6 +1,5 @@
 Ancho
 =====
-
 ### Introduction
 
 Cross-browser extension development is painful. All of the major browser platforms have completely different extension frameworks. And when we say different, we mean *different*: wildly incompatible languages, APIs and philosophies.
@@ -10,4 +9,3 @@ Ancho aims to remove the pain from cross-browser extension development by provid
 ### Current Status
 
 Ancho is under active development. We hope to have a beta version completed soon. We'll post more documentation at that time. In the meanwhile, you can post issues here if you have any inquiries.
-
