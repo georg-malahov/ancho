@@ -33,6 +33,10 @@ var BrowserAction = function(instanceID) {
 
   function setBrowserActionProperty(aTabId, aPropertyName, aValue) {
     if (aTabId) {
+      if (aPropertyName === 'badge' && aValue === '') {
+        delete browserActionInfo.tabSpecificInfo[aTabId];
+        return;
+      }
       if (!browserActionInfo.tabSpecificInfo[aTabId]) {
         browserActionInfo.tabSpecificInfo[aTabId] = {};
       }
@@ -45,8 +49,7 @@ var BrowserAction = function(instanceID) {
   function getBrowserActionProperty(aTabId, aPropertyName) {
     if (aTabId
       && browserActionInfo.tabSpecificInfo[aTabId]
-      && browserActionInfo.tabSpecificInfo[aTabId][aPropertyName] != undefined)
-    {
+      && browserActionInfo.tabSpecificInfo[aTabId][aPropertyName] != undefined) {
       return browserActionInfo.tabSpecificInfo[aTabId][aPropertyName];
     } else {
       return browserActionInfo.globalInfo[aPropertyName];
@@ -58,7 +61,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.getBadgeBackgroundColor
   this.getBadgeBackgroundColor = function(details, callback) {
-    var args = preprocessArguments('chrome.browserAction.getBadgeBackgroundColor', arguments);
+    var args = preprocessArguments('chrome.browserAction.getBadgeBackgroundColor', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -68,7 +71,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.getBadgeText
   this.getBadgeText = function(details, callback) {
-    var args = preprocessArguments('chrome.browserAction.getBadgeText', arguments);
+    var args = preprocessArguments('chrome.browserAction.getBadgeText', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -78,7 +81,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.getPopup
   this.getPopup = function(details, callback) {
-    var args = preprocessArguments('chrome.browserAction.getPopup', arguments);
+    var args = preprocessArguments('chrome.browserAction.getPopup', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -88,7 +91,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.getTitle
   this.getTitle = function(details, callback) {
-    var args = preprocessArguments('chrome.browserAction.getTitle', arguments);
+    var args = preprocessArguments('chrome.browserAction.getTitle', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -98,7 +101,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.setBadgeBackgroundColor
   this.setBadgeBackgroundColor = function(details) {
-    var args = preprocessArguments('chrome.browserAction.setBadgeBackgroundColor', arguments);
+    var args = preprocessArguments('chrome.browserAction.setBadgeBackgroundColor', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -109,7 +112,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.setBadgeText
   this.setBadgeText = function(details) {
-    var args = preprocessArguments('chrome.browserAction.setBadgeText', arguments);
+    var args = preprocessArguments('chrome.browserAction.setBadgeText', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -120,7 +123,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.setIcon
   this.setIcon = function(details) {
-    var args = preprocessArguments('chrome.browserAction.setIcon', arguments);
+    var args = preprocessArguments('chrome.browserAction.setIcon', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -132,7 +135,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.setPopup
   this.setPopup = function(details) {
-    var args = preprocessArguments('chrome.browserAction.setPopup', arguments);
+    var args = preprocessArguments('chrome.browserAction.setPopup', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -143,7 +146,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.setTitle
   this.setTitle = function(details) {
-    var args = preprocessArguments('chrome.browserAction.setTitle', arguments);
+    var args = preprocessArguments('chrome.browserAction.setTitle', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -154,7 +157,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.enable
   this.enable = function(tabId) {
-    var args = preprocessArguments('chrome.browserAction.enable', arguments);
+    var args = preprocessArguments('chrome.browserAction.enable', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -165,7 +168,7 @@ var BrowserAction = function(instanceID) {
   //----------------------------------------------------------------------------
   // chrome.browserAction.enable
   this.disable = function(tabId) {
-    var args = preprocessArguments('chrome.browserAction.disable', arguments);
+    var args = preprocessArguments('chrome.browserAction.disable', arguments, 'chrome.browserAction');
     if (!browserActionInfo) {
       throw new Error('This extension has no action specified.');
     }
@@ -211,7 +214,7 @@ function createPopup(aX, aY, aPopup) {
 }
 
 
-
+//Called from api.js - uses data provided from manifest
 exports.initBrowserAction = function(browserActionData) {
   var debugString = "browserAction.initAPI(..) called.";
 
@@ -232,7 +235,7 @@ exports.initBrowserAction = function(browserActionData) {
       },
       globalInfo: {
         enabled: true,
-        badgeBackgroundColor: '#FFFFFF',
+        badgeBackgroundColor: '#000000',
         badge: '',
         title: undefined,
         popup: undefined

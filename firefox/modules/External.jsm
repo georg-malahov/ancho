@@ -5,7 +5,7 @@ var AnchoExternal = {
   __context: null,
   __set: function(context) {
     if (context && !context.invoke) {
-      throw 'AnchoExtenal::__set() : no invoke function in the provided context.';
+      throw 'AnchoExternal::__set() : no invoke function in the provided context.';
     }
     this.__context = context;
   },

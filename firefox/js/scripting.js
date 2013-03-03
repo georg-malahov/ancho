@@ -2,6 +2,7 @@
   var Cc = Components.classes;
   var Ci = Components.interfaces;
   var Cu = Components.utils;
+  var CC = Components.Constructor;
 
   Cu.import('resource://gre/modules/Services.jsm');
   Cu.import('resource://ancho/modules/Require.jsm');
@@ -13,22 +14,17 @@
   var Config = require('./config');
 
   function prepareWindow(window) {
-    if (!('require' in window)) {
-      var sandbox = Cu.Sandbox(window, { sandboxPrototype: window });
-
+    if (!('chrome' in window)) {
       var api = new API(window, ExtensionState);
-      window.chrome = sandbox.chrome = api.chrome;
-      window.ancho = sandbox.ancho = api.ancho;
-      window.console = sandbox.console = api.console;
-
-      window.require = sandbox.require = Require.createRequireForWindow(sandbox);
+      window.chrome = api.chrome;
+      window.ancho = api.ancho;
+      window.console = api.console;
 
       window.addEventListener('unload', function(event) {
         window.removeEventListener('unload', arguments.callee, false);
         delete window.chrome;
         delete window.ancho;
         delete window.console;
-        delete window.require;
       });
     }
   }
@@ -38,12 +34,20 @@
     for (var i=0; i<contentScripts.length; i++) {
       var scriptInfo = contentScripts[i];
       var matches = scriptInfo.matches;
-      var principal = ExtensionState.backgroundWindow;
+      var principal;
+      // Preserving backwards compatibility with FF18 and older.
+      if (Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo).version.split('.')[0] >= 19) {
+        principal = CC('@mozilla.org/systemprincipal;1', 'nsIPrincipal')();
+      }
+      else {
+        principal = ExtensionState.backgroundWindow;
+      }
       var sandbox = Cu.Sandbox(principal, { sandboxPrototype: win });
       var api = new API(win, ExtensionState);
       sandbox.chrome = api.chrome;
       sandbox.ancho = api.ancho;
       sandbox.console = api.console;
+      sandbox.XMLHttpRequest = Require.XMLHttpRequest;
       for (var j=0; j<matches.length; j++) {
         if (spec.match(matches[j])) {
           for (var k=0; k<scriptInfo.js.length; k++) {
@@ -56,7 +60,7 @@
             try {
               Cu.evalInSandbox(script, sandbox);
             } catch(err) {
-              dump('Ancho: script "' + scriptInfo.js[k] + '" failed: "' + err.message + '"\n');
+              dump('Ancho: script "' + scriptInfo.js[k] + '" failed: "' + err.message + '"\n' + err.stack + '\n');
             }
           }
           break;
@@ -71,19 +75,20 @@
   // as content scripts.
   exports.loadHtml = function(document, iframe, htmlSpec, callback) {
     var targetWindow = iframe.contentWindow;
-    document.addEventListener('DOMWindowCreated', function(event) {
-      var window = event.target.defaultView.wrappedJSObject;
-      if (window != targetWindow) {
+    iframe.addEventListener('DOMWindowCreated', function(event) {
+      var window = event.target.defaultView;
+      // Check the wrappedJSObject for FF <= 18.
+      if (window !== targetWindow && window.wrappedJSObject !== targetWindow) {
         return;
       }
       document.removeEventListener('DOMWindowCreated', arguments.callee, false);
-      prepareWindow(window);
+      prepareWindow(targetWindow.wrappedJSObject);
     }, false);
 
     if (callback) {
       iframe.addEventListener('DOMContentLoaded', function(event) {
         iframe.removeEventListener('DOMContentLoaded', arguments.callee, false);
-        callback(event.target.defaultView.wrappedJSObject);
+        callback(targetWindow.wrappedJSObject);
       }, false);
     }
 

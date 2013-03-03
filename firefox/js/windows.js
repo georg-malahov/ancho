@@ -59,6 +59,7 @@
       iframe.setAttribute('flex', '1');
       iframe.setAttribute('src', 'about:blank');
       iframe.setAttribute('style', 'overflow: hidden');
+      iframe.setAttribute('type', 'chrome');
 
       var baseSpec = Services.io.newURI(this._contentWindow.document.location.href, '', null);
       iframe.addEventListener('DOMContentLoaded', function() {

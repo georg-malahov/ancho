@@ -41,6 +41,7 @@
 
       // Create an iframe inside the toolbar to hold the HTML content.
       var iframe = win.document.createElement('iframe');
+      iframe.setAttribute('type', 'chrome');
       iframe.setAttribute('flex', '1');
 
       // Attach the elements to the document.

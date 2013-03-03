@@ -57,7 +57,6 @@ HRESULT CAnchoRuntime::InitAddons()
     }
     dwLen = 4096;
   }
-
   return S_OK;
 }
 
@@ -80,6 +79,7 @@ void CAnchoRuntime::DestroyAddons()
   {
     m_pWebBrowser.Release();
   }
+  ATLTRACE(L"ANCHO: all addons destroyed for runtime %d\n", m_TabID);
 }
 
 //----------------------------------------------------------------------------
@@ -97,7 +97,6 @@ HRESULT CAnchoRuntime::Cleanup()
 HRESULT CAnchoRuntime::Init()
 {
   ATLASSERT(m_spUnkSite);
-
   // get IServiceProvider to get IWebBrowser2 and IOleWindow
   CComQIPtr<IServiceProvider> pServiceProvider = m_spUnkSite;
   if (!pServiceProvider)
@@ -113,11 +112,12 @@ HRESULT CAnchoRuntime::Init()
 
   AtlAdvise(m_pWebBrowser, (IUnknown *)(TWebBrowserEvents *) this, DIID_DWebBrowserEvents2, &m_WebBrowserEventsCookie);
 
+  ATLTRACE(L"ANCHO: runtime initialization - CoCreateInstace(CLSID_AnchoAddonService)\n");
   // create addon service object
   IF_FAILED_RET(m_pAnchoService.CoCreateInstance(CLSID_AnchoAddonService));
 
   // Registering tab in service - obtains tab id and assigns it to the tab as property
-  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, &m_TabID));
+  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, m_HeartBeatSlave.id(), &m_TabID));
   HWND hwnd;
   m_pWebBrowser->get_HWND((long*)&hwnd);
   ::SetProp(hwnd, s_AnchoTabIDPropertyName, (HANDLE)m_TabID);
@@ -133,6 +133,7 @@ HRESULT CAnchoRuntime::Init()
   // Set the sink as property of the browser so it can be retrieved if someone wants to send
   // us events.
   IF_FAILED_RET(m_pWebBrowser->PutProperty(L"_anchoBrowserEvents", CComVariant(m_pBrowserEventSource)));
+  ATLTRACE(L"ANCHO: runtime %d initialized\n", m_TabID);
   return S_OK;
 }
 
@@ -153,8 +154,9 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserProgressChange(LONG Progress, LONG P
     if (readyState == READYSTATE_INTERACTIVE) {
       CComBSTR url;
       m_pWebBrowser->get_LocationURL(&url);
-      InitializeExtensionScripting(url);
-      m_ExtensionPageAPIPrepared = true;
+      if (S_OK == InitializeExtensionScripting(url)) {
+        m_ExtensionPageAPIPrepared = true;
+      }
     }
   }
 }
@@ -164,11 +166,13 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserProgressChange(LONG Progress, LONG P
 STDMETHODIMP_(void) CAnchoRuntime::OnNavigateComplete(LPDISPATCH pDispatch, VARIANT *URL)
 {
   CComBSTR url(URL->bstrVal);
-  if (isExtensionPage(std::wstring(url))) {
-    m_IsExtensionPage = true;
-    InitializeExtensionScripting(url);
-    m_ExtensionPageAPIPrepared = true;
-  }
+  m_IsExtensionPage = isExtensionPage(std::wstring(url));
+  /*if (m_IsExtensionPage) {
+    // Too early for api injections
+    if (S_OK == InitializeExtensionScripting(url)) {
+      m_ExtensionPageAPIPrepared = true;
+    }
+  }*/
 }
 
 //----------------------------------------------------------------------------
@@ -176,10 +180,22 @@ STDMETHODIMP_(void) CAnchoRuntime::OnNavigateComplete(LPDISPATCH pDispatch, VARI
 STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VARIANT *pURL, VARIANT *Flags,
   VARIANT *TargetFrameName, VARIANT *PostData, VARIANT *Headers, BOOL *Cancel)
 {
+  static bool bFirstRun = true;
+
   // Add the frame to the frames map so we can retrieve the IWebBrowser2 object using the URL.
   ATLASSERT(pURL->vt == VT_BSTR && pURL->bstrVal != NULL);
   CComQIPtr<IWebBrowser2> pWebBrowser(pDisp);
   ATLASSERT(pWebBrowser != NULL);
+
+  // Workaround to ensure that first request goes through PAPP
+  if (bFirstRun) {
+    bFirstRun = false;
+    *Cancel = TRUE;
+    pWebBrowser->Stop();
+    pWebBrowser->Navigate2(pURL, Flags, TargetFrameName, PostData, Headers);
+    return;
+  }
+
   VARIANT_BOOL isTop;
   if (SUCCEEDED(pWebBrowser->get_TopLevelContainer(&isTop))) {
     if (isTop) {
@@ -189,11 +205,12 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
   }
   CComBSTR bstrUrl;
   removeUrlFragment(pURL->bstrVal, &bstrUrl);
-  m_Frames[(BSTR) bstrUrl] = pWebBrowser;
+  m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop != VARIANT_FALSE);
 
   // Check if this is a new tab we are creating programmatically.
   // If so redirect it to the correct URL.
   std::wstring url(pURL->bstrVal, SysStringLen(pURL->bstrVal));
+
   //TODO - use headers instead of url
   size_t first = url.find_first_of(L'#');
   size_t last = url.find_last_of(L'#');
@@ -251,7 +268,155 @@ STDMETHODIMP CAnchoRuntime::OnFrameRedirect(BSTR bstrOldUrl, BSTR bstrNewUrl)
   }
   return S_OK;
 }
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoRuntime::OnBeforeRequest(VARIANT aReporter)
+{
+  ATLASSERT(aReporter.vt == VT_UNKNOWN);
+  CComBSTR str;
+  CComQIPtr<IWebRequestReporter> reporter(aReporter.punkVal);
+  if (!reporter) {
+    return E_INVALIDARG;
+  }
+  BeforeRequestInfo outInfo;
+  CComBSTR url;
+  CComBSTR method;
+  reporter->getUrl(&url);
+  reporter->getHTTPMethod(&method);
 
+  std::wstring type = L"other";
+  FrameMap::const_iterator it = m_Frames.find(url.m_str);
+  if (it != m_Frames.end()) {
+    type = it->second.isTopLevel ? L"main_frame" : L"sub_frame";
+  }
+
+  fireOnBeforeRequest(url.m_str, method.m_str, type, outInfo);
+  if (outInfo.cancel) {
+    reporter->cancelRequest();
+  }
+  if (outInfo.redirect) {
+    reporter->redirectRequest(CComBSTR(outInfo.newUrl.c_str()));
+  }
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoRuntime::OnBeforeSendHeaders(VARIANT aReporter)
+{
+  ATLASSERT(aReporter.vt == VT_UNKNOWN);
+  CComBSTR str;
+  CComQIPtr<IWebRequestReporter> reporter(aReporter.punkVal);
+  if (!reporter) {
+    return E_INVALIDARG;
+  }
+  BeforeSendHeadersInfo outInfo;
+  CComBSTR url;
+  CComBSTR method;
+  reporter->getUrl(&url);
+  reporter->getHTTPMethod(&method);
+
+  std::wstring type = L"other";
+  FrameMap::const_iterator it = m_Frames.find(url.m_str);
+  if (it != m_Frames.end()) {
+    type = it->second.isTopLevel ? L"main_frame" : L"sub_frame";
+  }
+
+  fireOnBeforeSendHeaders(url.m_str, method.m_str, type, outInfo);
+  if (outInfo.modifyHeaders) {
+    reporter->setNewHeaders(CComBSTR(outInfo.headers.c_str()).Detach());
+  }
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+HRESULT CAnchoRuntime::fireOnBeforeRequest(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeRequestInfo &aOutInfo)
+{
+  CComPtr<ComSimpleJSObject> info;
+  IF_FAILED_RET(SimpleJSObject::createInstance(info));
+  info->setProperty(L"url", CComVariant(aUrl.c_str()));
+  info->setProperty(L"method", CComVariant(aMethod.c_str()));
+  info->setProperty(L"type", CComVariant(aType.c_str()));
+  info->setProperty(L"tabId", CComVariant(m_TabID));
+
+  CComPtr<ComSimpleJSArray> argArray;
+  IF_FAILED_RET(SimpleJSArray::createInstance(argArray));
+  argArray->push_back(CComVariant(info.p));
+
+  CComVariant result;
+  m_pAnchoService->invokeEventObjectInAllExtensions(CComBSTR(L"webRequest.onBeforeRequest"), argArray.p, &result);
+  if (result.vt & VT_ARRAY) {
+    CComSafeArray<VARIANT> arr;
+    arr.Attach(result.parray);
+    //contained data already managed by CComSafeArray
+    VARIANT tmp = {0}; HRESULT hr = result.Detach(&tmp);
+    BEGIN_TRY_BLOCK
+      aOutInfo.cancel = false;
+      for (size_t i = 0; i < arr.GetCount(); ++i) {
+        JSValue item(arr.GetAt(i));
+
+        JSValue cancel = item[L"cancel"];
+        if (!cancel.isNull()) {
+          aOutInfo.cancel = aOutInfo.cancel || cancel.toBool();
+        }
+
+        JSValue redirectUrl = item[L"redirectUrl"];
+        if (!redirectUrl.isNull()) {
+          aOutInfo.redirect = true;
+          aOutInfo.newUrl = redirectUrl.toString();
+        }
+      }
+    END_TRY_BLOCK_CATCH_TO_HRESULT
+
+  }
+  return S_OK;
+}
+//----------------------------------------------------------------------------
+//
+HRESULT CAnchoRuntime::fireOnBeforeSendHeaders(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeSendHeadersInfo &aOutInfo)
+{
+  aOutInfo.modifyHeaders = false;
+  CComPtr<ComSimpleJSObject> info;
+  IF_FAILED_RET(SimpleJSObject::createInstance(info));
+  info->setProperty(L"url", CComVariant(aUrl.c_str()));
+  info->setProperty(L"method", CComVariant(aMethod.c_str()));
+  info->setProperty(L"type", CComVariant(aType.c_str()));
+  info->setProperty(L"tabId", CComVariant(m_TabID));
+  info->setProperty(L"requestHeaders", CComVariant());
+
+  CComPtr<ComSimpleJSArray> argArray;
+  IF_FAILED_RET(SimpleJSArray::createInstance(argArray));
+  argArray->push_back(CComVariant(info.p));
+
+  CComVariant result;
+  m_pAnchoService->invokeEventObjectInAllExtensions(CComBSTR(L"webRequest.onBeforeSendHeaders"), argArray.p, &result);
+  if (result.vt & VT_ARRAY) {
+    CComSafeArray<VARIANT> arr;
+    arr.Attach(result.parray);
+    //contained data already managed by CComSafeArray
+    VARIANT tmp = {0}; HRESULT hr = result.Detach(&tmp);
+    BEGIN_TRY_BLOCK
+      for (size_t i = 0; i < arr.GetCount(); ++i) {
+        JSValue item(arr.GetAt(i));
+        JSValue requestHeaders = item[L"requestHeaders"];
+        if (!requestHeaders.isNull()) {
+          std::wostringstream oss;
+          int headerCount = requestHeaders[L"length"].toInt();
+          for (int i = 0; i < headerCount; ++i) {
+            JSValue headerRecord = requestHeaders[i];
+            //TODO handle headerRecord[L"binaryValue"]
+            std::wstring headerText = headerRecord[L"name"].toString() + std::wstring(L": ") + headerRecord[L"value"].toString();
+            oss << headerText << L"\r\n";
+          }
+          aOutInfo.modifyHeaders = true;
+          aOutInfo.headers = oss.str();
+        }
+      }
+    END_TRY_BLOCK_CATCH_TO_HRESULT
+
+  }
+
+  return S_OK;
+}
 //----------------------------------------------------------------------------
 //  InitializeContentScripting
 HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL isRefreshingMainFrame, documentLoadPhase aPhase)
@@ -268,7 +433,7 @@ HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL isR
       // Either this frame has already been removed, or the request isn't for a frame after all (e.g. an htc).
       return S_FALSE;
     }
-    webBrowser = it->second;
+    webBrowser = it->second.browser;
   }
   // Normally the frame map is cleared in the BeforeNavigate2 handler, but it isn't triggered when the
   // page is refreshed, so we need this workaround as well.
@@ -292,7 +457,7 @@ HRESULT CAnchoRuntime::InitializeExtensionScripting(BSTR bstrUrl)
   if (it != m_Addons.end()) {
     return it->second->InitializeExtensionScripting(bstrUrl);
   }
-  return S_OK;
+  return S_FALSE;
 }
 
 //----------------------------------------------------------------------------
@@ -311,6 +476,7 @@ STDMETHODIMP CAnchoRuntime::SetSite(IUnknown *pUnkSite)
   else
   {
     DestroyAddons();
+    Cleanup();
   }
   return hr;
 }
@@ -338,7 +504,17 @@ STDMETHODIMP CAnchoRuntime::executeScript(BSTR aExtensionId, BSTR aCode, INT aFi
   //TODO: check permissions from manifest
   return S_OK;
 }
-
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoRuntime::showBrowserActionBar(INT aShow)
+{
+  wchar_t clsid[1024] = {0};
+  IF_FAILED_RET(::StringFromGUID2( CLSID_IEToolbar, (OLECHAR*)clsid, sizeof(clsid)));
+  CComVariant clsidVar(clsid);
+  CComVariant show(aShow != FALSE);
+  IF_FAILED_RET(m_pWebBrowser->ShowBrowserBar(&clsidVar, &show, NULL));
+  return S_OK;
+}
 //----------------------------------------------------------------------------
 //
 STDMETHODIMP CAnchoRuntime::updateTab(LPDISPATCH aProperties)

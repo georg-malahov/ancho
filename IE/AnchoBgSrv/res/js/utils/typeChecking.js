@@ -14,12 +14,13 @@ var validationError = {
 
 //Used when value can be of more than one type -
 //does checking for all types and succeeds when at least one succeeds.
-var MultiTypeValidator = function(aSpec) {
+var MultiTypeValidator = function(aSpec, aNamespace) {
   var spec = aSpec;
+  var typeNamespace = aNamespace;
   var types = aSpec.type;
   var validators = [];
   for(var i = 0; i < types.length; ++i) {
-    validators.push(validatorManager.getValidator(types[i]));
+    validators.push(validatorManager.getValidator(types[i], typeNamespace));
   }
 
   this.validate = function(aInstance) {
@@ -66,30 +67,41 @@ var ValidatorManager = function() {
 
   var validators = {};
 
-  this.getValidator = function(aSpec) {
+  this._getValidatorConstructor = function(aName, aNamespace) {
+    var validatorConstructor = validators[aName];
+    if (!validatorConstructor && aNamespace) {
+      //Try also with namespace
+      validatorConstructor = validators[aNamespace + "." + aName];
+    }
+    return validatorConstructor;
+  }
+
+  this.getValidator = function(aSpec, aNamespace) {
     if (!aSpec) {
       throw new Error('Unspecified validator name!');
     }
     if (utils.isString(aSpec)) {
-      console.log("getting validator for " + aSpec);
-      if (!validators[aSpec]) {
+      var validatorConstructor = this._getValidatorConstructor(aSpec, aNamespace);
+      if (!validatorConstructor) {
         throw new Error('Unavailable validator :' + aSpec);
       }
-      return new validators[aSpec]();
+      return new validatorConstructor(null, aNamespace);
     }
     if (!utils.isString(aSpec.type)) {
       if (utils.isArray(aSpec.type)) {
-        return new MultiTypeValidator(aSpec);
+        return new MultiTypeValidator(aSpec, aNamespace);
       }
       if (aSpec.type.type) {
-        return new validators[aSpec.type.type](aSpec.type);
+        var validatorConstructor = this._getValidatorConstructor(aSpec.type.type, aNamespace);
+        return new validatorConstructor(aSpec.type, aNamespace);
       }
       throw new Error('Unsupported type specifier');
     }
-    if (!validators[aSpec.type]) {
+    var validatorConstructor = this._getValidatorConstructor(aSpec.type, aNamespace);
+    if (!validatorConstructor) {
       throw new Error('Unsupported type specification: ' + aSpec.type);
     }
-    return new validators[aSpec.type](aSpec);
+    return new validatorConstructor(aSpec, aNamespace);
   }
 
   this.addValidator = function(aValidatorName, aValidator) {
@@ -103,7 +115,7 @@ var ValidatorManager = function() {
     validators[aValidatorName] = aValidator;
   }
 
-
+  //This method adds composite validator which is binded with its specification
   this.addSpecValidatorWrapper = function(aName, aSpecification) {
     if (!aName || !utils.isString(aName)) {
       throw new Error('Wrong validator name!');
@@ -120,8 +132,8 @@ var ValidatorManager = function() {
     if (!validatorBase) {
       throw new Error('Validator wrapper \'' + aName + '\' needs existing validator : \'' + aSpecification.type + '\'')
     }
-    var validatorConstructor = function() {
-      validatorBase.call(this, specification);
+    var validatorConstructor = function(aSpec2, aNamespace) { //TODO: decide whether fix the namespace during initialization
+      validatorBase.call(this, specification, aNamespace);
     }
     this.addValidator(aName, validatorConstructor);
   }
@@ -208,13 +220,15 @@ var ValidatorManager = function() {
     }
   });
 }
-var validatorManager = new ValidatorManager;
+var validatorManager = new ValidatorManager();
 exports.validatorManager = validatorManager;
 
 
-var FunctionArgumentsValidator = function(aSpecification) {
+var FunctionArgumentsValidator = function(aSpecification, aNamespace) {
 
   var specification = aSpecification;
+
+  var typeNamespace = aNamespace;
 
   this.getFunctionCallString = function(aFunctionName, aArguments) {
     var tmp = aFunctionName + '(';
@@ -278,7 +292,7 @@ var FunctionArgumentsValidator = function(aSpecification) {
     for (var i = 0; i < specification.items.length; ++i) {
 
       var spec = specification.items[i];
-      var validator = validatorManager.getValidator(spec);
+      var validator = validatorManager.getValidator(spec, typeNamespace);
 
       valResult = validator.validate(aArguments[argIdx]);
 
@@ -333,8 +347,9 @@ var FunctionArgumentsValidator = function(aSpecification) {
 }
 validatorManager.addValidator('functionArguments', FunctionArgumentsValidator);
 
-var ObjectValidator = function(aSpec) {
+var ObjectValidator = function(aSpec, aNamespace) {
   var specification = aSpec;
+  var typeNamespace = aNamespace;
   this.validate = function (aObject) {
     var validationReport = createValidationReportSuccess();
 
@@ -352,7 +367,7 @@ var ObjectValidator = function(aSpec) {
       property = aObject[i];
       propertySpecification = properties[i];
       if (property !== undefined) {
-        validator = validatorManager.getValidator(propertySpecification);
+        validator = validatorManager.getValidator(propertySpecification, typeNamespace);
         var report = validator.validate(property);
         if (!report.success) {
           var e = 'Wrong type for property \'' + i + '\'!';
@@ -370,8 +385,9 @@ var ObjectValidator = function(aSpec) {
 }
 validatorManager.addValidator('object', ObjectValidator);
 
-var ArrayValidator = function(aSpec) {
+var ArrayValidator = function(aSpec, aNamespace) {
   var specification = aSpec;
+  var typeNamespace = aNamespace;
 
   this.validate = function(aArray) {
     var validationReport = createValidationReportSuccess();
@@ -383,7 +399,7 @@ var ArrayValidator = function(aSpec) {
     }
     if (!utils.isArray(specification.items)) {
       var spec = specification.items;
-      var validator = validatorManager.getValidator(spec);
+      var validator = validatorManager.getValidator(spec, typeNamespace);
       for (var i = 0; i < aArray.length; ++i) {
         var report = validator.validate(aArray[i]);
         if (!report.success) {
@@ -395,7 +411,7 @@ var ArrayValidator = function(aSpec) {
 
     for (var i = 0; i < specification.items.length; ++i) {
       var spec = specification.items[i];
-      var validator = validatorManager.getValidator(spec);
+      var validator = validatorManager.getValidator(spec, typeNamespace);
 
       valResult = validator.validate(aArray[argIdx]);
 
@@ -427,15 +443,15 @@ var ImageDataValidator = function() {
 validatorManager.addValidator('imagedata', ImageDataValidator);
 
 //Validation procedure - throws an exception when validation error uccured.
-var preprocessArguments = function(aMethodName, aArguments) {
+var preprocessArguments = function(aMethodName, aArguments, aNamespace) {
   var validator = null;
   try {
-    validator = validatorManager.getValidator(aMethodName);
+    validator = validatorManager.getValidator(aMethodName, aNamespace);
   } catch (e) {
     console.error('Cannot obtain right validator for :' + aMethodName + '\n\t' + e.message);
     throw e;
   }
-  var report = validator.validate(aArguments);
+  var report = validator.validate(aArguments, aNamespace);
 
   if (report.success) {
     return report.processedArguments;
@@ -447,10 +463,10 @@ exports.preprocessArguments = preprocessArguments;
 
 //Used in methods which are not implemented yet - it throws an exception,
 //but also checks passed arguments - so caller atleast knows that he didn't make a mistake.
-exports.notImplemented = function(aMethodName, aArguments) {
+exports.notImplemented = function(aMethodName, aArguments, aNamespace) {
   var message = 'Function \'' + aMethodName + '\' not yet implemented. Arguments were OK.';
   try {
-    preprocessArguments(aMethodName, aArguments);
+    preprocessArguments(aMethodName, aArguments, aNamespace);
   } catch (e) {
     message = 'Function \'' + aMethodName + '\' not yet implemented. Also problem with arguments : ' + (e.message || e.description);
   }

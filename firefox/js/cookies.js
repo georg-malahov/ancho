@@ -16,8 +16,6 @@
   var CookiesAPI = function(state, window) {
     this._state = state;
     this._tab = Utils.getWindowId(window);
-    this.cookieService = Cc["@mozilla.org/cookieService;1"]
-        .getService(Ci.nsICookieService);
     this.onChanged = new Event(window, this._tab, this._state, 'cookie.changed');
     Services.obs.addObserver(this, COOKIE_CHANGED, false);
   };

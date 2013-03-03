@@ -21,6 +21,7 @@
 #include <atlcom.h>
 #include <atlctl.h>
 #include <atlcoll.h>
+#include <atlsafe.h>
 
 #include <shlguid.h>
 #include <exdispid.h>
@@ -91,3 +92,7 @@ using namespace LIB_BhoHelper;
 
 #define ENSURE_RETVAL(_val) \
   if (!_val) return E_POINTER;
+
+#include <Exceptions.h>
+#include <SimpleWrappers.h>
+#include <IPCHeartbeat.h>

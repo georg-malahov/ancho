@@ -1,7 +1,9 @@
-const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
+const { classes: Cc, interfaces: Ci, utils: Cu, manager: Cm } = Components;
 
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/AddonManager.jsm');
+
+const EXTENSION_ID = 'ancho@salsitasoft.com';
 
 // Create background part of the extension (window object). The
 // background script is loaded separately using the window for its context
@@ -67,19 +69,35 @@ function setResourceSubstitution(addon) {
   resourceProtocol.setSubstitution('ancho', addon.getResourceURI('/'));
 }
 
-function loadConfig(addon) {
+function matchPatternToRegexp(matchPattern) {
+  // TODO: Implement this according to the spec.
+  // Each section (scheme, host, etc.) should be compared individually.
+  return matchPattern
+    .replace('<all_urls>', '*')
+    .replace(/\./g, '\\.')
+    .replace(/\*/g, '.*')
+}
+
+function loadConfig(addon, firstRun) {
   // Load the manifest
   Cu.import('resource://ancho/modules/Require.jsm');
+
   var baseURI = Services.io.newURI('resource://ancho/', '', null);
   require = Require.createRequireForWindow(this, baseURI);
 
+  var extensionState = require('./js/state');
+  extensionState.id = EXTENSION_ID;
+
   var Config = require('./js/config');
+  Config.firstRun = firstRun;
+
   var readStringFromUrl = require('./js/utils').readStringFromUrl;
 
   if (addon.hasResource('chrome-ext/manifest.json')) {
     var manifestUrl = addon.getResourceURI('chrome-ext/manifest.json');
     var manifest = readStringFromUrl(manifestUrl);
     var config = JSON.parse(manifest);
+    Config.extensionName = config.name;
     // Set the module search path if any
     if ('module_search_path' in config) {
       for (var i=0; i<config.module_search_path.length; i++) {
@@ -92,15 +110,10 @@ function loadConfig(addon) {
         var matches = [];
         for (var j=0; j<scriptInfo.matches.length; j++) {
           // Convert from Google's simple wildcard syntax to a proper regular expression
-          matches.push(
-            scriptInfo.matches[j]
-              .replace('<all_urls>', '*')
-              .replace(/\./g, '\\.')
-              .replace(/\*/g, '.*')
-          );
+          matches.push(matchPatternToRegexp(scriptInfo.matches[j]));
         }
         var js = [];
-        for (var j=0; j<scriptInfo.js.length; j++) {
+        for (j=0; j<scriptInfo.js.length; j++) {
           js.push(scriptInfo.js[j]);
         }
         Config.contentScripts.push({
@@ -115,12 +128,46 @@ function loadConfig(addon) {
         Config.backgroundPage = bg.page;
       }
       if (bg.scripts) {
-        for (var i=0; i<bg.scripts.length; i++) {
+        for (i=0; i<bg.scripts.length; i++) {
           Config.backgroundScripts.push(bg.scripts[i]);
         }
       }
     } // background
+    if (config.browser_action) {
+      Config.browser_action = {
+        default_icon : config.browser_action.default_icon,
+        default_popup : config.browser_action.default_popup
+      }
+    }
+    if (config.web_accessible_resources) {
+      for (i=0; i<config.web_accessible_resources.length; i++) {
+        Config.webAccessibleResources.push(
+          matchPatternToRegexp(config.web_accessible_resources[i])
+        );
+      }
+    }
   } // has manifest.json?
+}
+
+function registerProtocolHandler(addon) {
+  var protocolHandler = require('./js/protocolHandler');
+  Cm.QueryInterface(Ci.nsIComponentRegistrar).registerFactory(
+    protocolHandler.classID,
+    '',
+    '@mozilla.org/network/protocol;1?name=chrome-extension',
+    protocolHandler.componentFactory
+  );
+
+  // TODO: Make this generic so we can handle multiple Ancho addons.
+  protocolHandler.registerExtensionURI('ancho', addon.getResourceURI('chrome-ext').spec);
+}
+
+function unregisterProtocolHandler() {
+  var protocolHandler = require('./js/protocolHandler');
+  Cm.QueryInterface(Ci.nsIComponentRegistrar).unregisterFactory(
+    protocolHandler.classID,
+    protocolHandler.componentFactory
+  );
 }
 
 function unloadBackgroundScripts() {
@@ -132,9 +179,10 @@ function unloadBackgroundScripts() {
 function startup(data, reason) {
   dump('\nAncho: starting up ...\n\n');
 
-  AddonManager.getAddonByID('ancho@salsitasoft.com', function(addon) {
+  AddonManager.getAddonByID(EXTENSION_ID, function(addon) {
     setResourceSubstitution(addon);
-    loadConfig(addon);
+    loadConfig(addon, (reason === ADDON_INSTALL || reason === ADDON_ENABLE));
+    registerProtocolHandler(addon);
     createBackground();
   });
 }
@@ -144,6 +192,7 @@ function startup(data, reason) {
 function shutdown(data, reason) {
   dump('\nAncho: shutting down ...\n\n');
 
+  unregisterProtocolHandler();
   releaseBackground();
   unloadBackgroundScripts();
 

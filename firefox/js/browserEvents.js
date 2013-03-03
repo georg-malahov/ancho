@@ -9,10 +9,12 @@
     this.init = function(contentLoadedCallback) {
       function onContentLoaded(event) {
         var document = tabbrowser.contentDocument;
+        // TODO: Implement for subframes
         var isFrame = (event.target instanceof Ci.nsIDOMHTMLDocument &&
           event.target != document);
-
-        if (!isFrame) {
+        // We don't want to trigger the content scripts for about:blank.
+        var hasContent = ('about:' !== document.location.protocol);
+        if (hasContent && !isFrame) {
           if (contentLoadedCallback) {
             contentLoadedCallback(tabbrowser.contentWindow, document.location.href);
           }

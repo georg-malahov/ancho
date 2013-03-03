@@ -18,6 +18,27 @@
 #define ANCHO_SWITCH_REPORT_RESULT ANCHO_SWITCH_BASE+2
 #define ANCHO_SWITCH_REDIRECT ANCHO_SWITCH_BASE+3
 
+static CComBSTR
+getMethodNameFromBindInfo(BINDINFO &aInfo)
+{
+  CComBSTR method;
+  switch (aInfo.dwBindVerb) {
+  case BINDVERB_GET:
+    method = L"GET";
+    break;
+  case BINDVERB_POST:
+    method = L"POST";
+    break;
+  case BINDVERB_PUT:
+    method = L"PUT";
+    break;
+  default:
+    method = L"";
+    break;
+  };
+  return method;
+}
+
 /*============================================================================
  * class CAnchoStartPolicy
  */
@@ -41,7 +62,7 @@ HRESULT CAnchoStartPolicy::OnStartEx(
   IInternetProtocolEx* pTargetProtocol)
 {
   ATLASSERT(pUri != NULL);
-  BSTR rawUri;
+  CComBSTR rawUri;
   HRESULT hr = pUri->GetRawUri(&rawUri);
   GetSink()->m_Url = std::wstring(rawUri, ::SysStringLen(rawUri));
   return __super::OnStartEx(pUri, pOIProtSink, pOIBindInfo, grfPI, dwReserved, pTargetProtocol);
@@ -72,6 +93,37 @@ STDMETHODIMP CAnchoProtocolSink::BeginningTransaction(
     *pszAdditionalHeaders = 0;
   }
 
+  { // event firing
+    CAnchoPassthruAPP *protocol = CAnchoPassthruAPP::GetProtocol(this);
+
+    CComBSTR method;
+    BINDINFO bindInfo = {0};
+    bindInfo.cbSize = sizeof(BINDINFO);
+    DWORD grfBINDF;
+    if (SUCCEEDED(GetBindInfo(&grfBINDF, &bindInfo))) {
+      method = getMethodNameFromBindInfo(bindInfo);
+    } else {
+      method = L"GET";
+    }
+
+    WebRequestReporterComObject * pNewObject = NULL;
+    if (SUCCEEDED(WebRequestReporterComObject::CreateInstance(&pNewObject))) {
+      CComPtr<IWebRequestReporter> reporter(pNewObject);
+      if (reporter && SUCCEEDED(reporter->init(CComBSTR(szURL), method))) {
+        if (SUCCEEDED(protocol->fireOnBeforeHeaders(CComPtr<CAnchoProtocolSink>(this), CComBSTR(szURL), reporter))) {
+          if (pNewObject->mNewHeadersAdded) {
+            LPWSTR wszAdditionalHeaders = (LPWSTR) CoTaskMemAlloc((pNewObject->mNewHeaders.Length()+1)*sizeof(WCHAR));
+            if (!wszAdditionalHeaders) {
+              return E_OUTOFMEMORY;
+            }
+            wcscpy_s(wszAdditionalHeaders, pNewObject->mNewHeaders.Length()+1, pNewObject->mNewHeaders.m_str);
+            wszAdditionalHeaders[pNewObject->mNewHeaders.Length()] = 0;
+            *pszAdditionalHeaders = wszAdditionalHeaders;
+          }
+        }
+      }
+    }
+  }
   CComPtr<IHttpNegotiate> spHttpNegotiate;
   IF_FAILED_RET(QueryServiceFromClient(&spHttpNegotiate));
 
@@ -237,6 +289,122 @@ CAnchoPassthruAPP::~CAnchoPassthruAPP()
   }
 }
 
+STDMETHODIMP CAnchoPassthruAPP::fireOnBeforeHeaders(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<IWebRequestReporter> aReporter)
+{
+  if (!m_BrowserEvents) {
+    if (!m_Doc) {
+      HRESULT hr = getDocumentFromSink(aSink, m_Doc);
+      if (S_OK != hr) {
+        return hr;
+      }
+    }
+    IF_FAILED_RET(getEventsFromSink(aSink, aUrl, m_BrowserEvents));
+  }
+  if (m_BrowserEvents) {
+    m_BrowserEvents->OnBeforeSendHeaders(CComVariant(aReporter.p));
+  }
+  return S_OK;
+}
+
+STDMETHODIMP CAnchoPassthruAPP::getDocumentFromSink(CComPtr<CAnchoProtocolSink> aSink, CComPtr<IHTMLDocument2> &aDoc)
+{
+  if (!m_Doc) {
+    CComPtr<IWindowForBindingUI> windowForBindingUI;
+    HRESULT hr = S_OK;
+
+    aSink->QueryServiceFromClient(IID_IWindowForBindingUI, &windowForBindingUI);
+    if (!windowForBindingUI) {
+      return E_FAIL;
+    }
+    HWND hwnd;
+    if (FAILED(windowForBindingUI->GetWindow(IID_IAuthenticate, &hwnd))) {
+      HRESULT hr = windowForBindingUI->GetWindow(IID_IHttpSecurity, &hwnd);
+      if (FAILED(hr)) {
+        ATLTRACE(L"CAnchoPassthruAPP - failed to obtain window handle");
+        return hr;
+      }
+    }
+
+    hr = getHTMLDocumentForHWND(hwnd, &aDoc);
+    if (FAILED(hr)) {
+      return S_FALSE;
+    }
+  }
+  return S_OK;
+}
+
+STDMETHODIMP CAnchoPassthruAPP::getEventsFromSink(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<DAnchoBrowserEvents> &aEvents)
+{
+  ATLASSERT(m_Doc);
+
+  CComPtr<IWebBrowser2> browser;
+  IF_FAILED_RET(getBrowserForHTMLDocument(m_Doc, &browser));
+
+  CComVariant var;
+  IF_FAILED_RET(browser->GetProperty(L"_anchoBrowserEvents", &var));
+
+  CComQIPtr<DAnchoBrowserEvents> events = var.pdispVal;
+  aEvents = events;
+  if (!aEvents) {
+    return E_FAIL;
+  }
+  return S_OK;
+}
+
+//----------------------------------------------------------------------------
+//  StartEx
+STDMETHODIMP CAnchoPassthruAPP::StartEx(
+		IUri *pUri,
+		IInternetProtocolSink *pOIProtSink,
+		IInternetBindInfo *pOIBindInfo,
+		DWORD grfPI,
+		HANDLE_PTR dwReserved)
+{
+  CComBSTR rawUri;
+  IF_FAILED_RET(pUri->GetRawUri(&rawUri));
+
+  CComPtr<CAnchoProtocolSink> pSink = GetSink();
+
+  IF_FAILED_RET(__super::StartEx(pUri, pOIProtSink, pOIBindInfo, grfPI, dwReserved));
+
+  if (!m_BrowserEvents) {
+    if (!m_Doc) {
+      HRESULT hr = getDocumentFromSink(pSink, m_Doc);
+      if (S_OK != hr) {
+        //We need to return success - otherwise the request would be thrown away
+        return S_OK;//hr;
+      }
+    }
+    IF_FAILED_RET(getEventsFromSink(pSink, rawUri, m_BrowserEvents));
+  }
+  if (m_BrowserEvents) {
+    CComBSTR method;
+    BINDINFO bindInfo = {0};
+    bindInfo.cbSize = sizeof(BINDINFO);
+    DWORD grfBINDF;
+    if (SUCCEEDED(pOIBindInfo->GetBindInfo(&grfBINDF, &bindInfo))) {
+      method = getMethodNameFromBindInfo(bindInfo);
+    } else {
+      method = L"GET";
+    }
+
+    WebRequestReporterComObject * pNewObject = NULL;
+    if (SUCCEEDED(WebRequestReporterComObject::CreateInstance(&pNewObject))) {
+      CComPtr<IWebRequestReporter> reporter(pNewObject);
+      if (reporter) {
+        IF_FAILED_RET(reporter->init(rawUri, method));
+        IF_FAILED_RET(m_BrowserEvents->OnBeforeRequest(CComVariant(reporter.p)));
+        BOOL cancel = FALSE;
+        if (SUCCEEDED(reporter->shouldCancel(&cancel)) && cancel) {
+          Abort(INET_E_TERMINATED_BIND, 0);
+        }
+      }
+    }
+  }
+
+  return S_OK;
+}
+
 //----------------------------------------------------------------------------
 //  Continue
 STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
@@ -259,17 +427,11 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
 
     if (!m_BrowserEvents) {
       if (!m_Doc) {
-        CComPtr<IWindowForBindingUI> windowForBindingUI;
-
-        pSink->QueryServiceFromClient(IID_IWindowForBindingUI, &windowForBindingUI);
-        if (!windowForBindingUI) {
-          return E_FAIL;
-        }
-        HWND hwnd;
-        IF_FAILED_RET(windowForBindingUI->GetWindow(IID_IAuthenticate, &hwnd));
-
-        HRESULT hr = getHTMLDocumentForHWND(hwnd, &m_Doc);
+        HRESULT hr = getDocumentFromSink(pSink, m_Doc);
         if (FAILED(hr)) {
+          return hr;
+        };
+        if (S_FALSE == hr) {
           // Not ready to get the window yet so we'll try again with the next notification.
           if (data->dwState == ANCHO_SWITCH_REDIRECT) {
             // Remember the redirect so we can trigger the corresponding event later.
@@ -278,7 +440,14 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
           return S_FALSE;
         }
       }
+      IF_FAILED_RET(getEventsFromSink(pSink, bstrUrl, m_BrowserEvents));
 
+      if (!m_BrowserEvents) {
+        return S_OK;;
+      }
+    }
+
+    {
       CComPtr<IWebBrowser2> browser;
       IF_FAILED_RET(getBrowserForHTMLDocument(m_Doc, &browser));
 
@@ -286,7 +455,8 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
       IF_FAILED_RET(browser->get_LocationURL(&topLevelUrl));
       // If we're refreshing then the sink won't know it is a frame, and the URL
       // will match the one already loaded into the browser.
-      m_IsRefreshingMainFrame = !(pSink->IsFrame()) && (topLevelUrl == bstrUrl);
+      std::wstring strippedTopLevelUrl = stripFragmentFromUrl(std::wstring(topLevelUrl.m_str));
+      m_IsRefreshingMainFrame = !(pSink->IsFrame()) && (strippedTopLevelUrl == std::wstring(bstrUrl.m_str));
 
       // We only want to handle the top-level request and any frames, not subordinate
       // requests like images. Usually the desired requests will have a bind context,
@@ -295,14 +465,6 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
       // that case.
       if (!(pSink->IsFrame()) && !m_IsRefreshingMainFrame) {
         return S_OK;
-      }
-
-      CComVariant var;
-      IF_FAILED_RET(browser->GetProperty(L"_anchoBrowserEvents", &var));
-
-      m_BrowserEvents = var.pdispVal;
-      if (!m_BrowserEvents) {
-        return E_FAIL;
       }
     }
 

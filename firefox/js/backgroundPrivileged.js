@@ -47,12 +47,15 @@ function windowLoaded(window) {
 function watchOnWindowLoad(window) {
   window.addEventListener('DOMContentLoaded', function(event) {
     window.removeEventListener('DOMContentLoaded', arguments.callee, false);
-    windowLoaded(window);
+    var windowtype = window.document.documentElement.getAttribute('windowtype');
+    if ('navigator:browser' === windowtype) {
+      windowLoaded(window);
+    }
   }, false);
 }
 
 function watchWindow(subject, topic) {
-  if (topic === 'domwindowopened') {
+  if ('domwindowopened' === topic) {
     watchOnWindowLoad(subject);
   }
 }
@@ -78,6 +81,8 @@ function createWindowWatcher() {
 }
 
 function releaseWindowWatcher() {
+  // TODO: Use the windowWatcher module everywhere.
+  require('./windowWatcher').unload();
   Services.ww.unregisterNotification(watchWindow);
 }
 
@@ -86,7 +91,7 @@ window.addEventListener('load', function(event) {
   ExtensionState.startSingletonAPIs(window);
   createWindowWatcher();
   var spec = Config.backgroundPage
-        ? Config.hostExtensionRoot + Config.backgroundPage
+        ? "chrome-extension://ancho/" + Config.backgroundPage
         // Cannot use 'about:blank' here, because DOM for 'about:blank'
         // is inappropriate for script inserting: neither 'document.head'
         // nor 'document.body' are defined.

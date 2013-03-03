@@ -6,13 +6,14 @@
   var Cr = Components.results;
 
   Cu.import('resource://gre/modules/Services.jsm');
-
   var Event = require('./event');
   var Utils = require('./utils');
 
   var HTTP_ON_MODIFY_REQUEST = 'http-on-modify-request';
   var HTTP_ON_EXAMINE_RESPONSE = 'http-on-examine-response';
   var HTTP_ON_EXAMINE_CACHED_RESPONSE = 'http-on-examine-cached-response';
+
+  var HTTP_STATUS_NOT_MODIFIED = 304;
 
   var BinaryInputStream = Components.Constructor('@mozilla.org/binaryinputstream;1', 'nsIBinaryInputStream');
   var StorageStream = Components.Constructor('@mozilla.org/storagestream;1', 'nsIStorageStream');
@@ -294,7 +295,7 @@
     // params.ip = ???
 
     // fire onBeforeRedirect
-    var redirected = (statusCode >= 300 && statusCode < 400);
+    var redirected = (statusCode >= 300 && statusCode < 400) && (statusCode != HTTP_STATUS_NOT_MODIFIED);
     if (redirected) {
       params.timeStamp = (new Date()).getTime();
       params.redirectUrl = httpChannel.getResponseHeader('Location');
@@ -443,21 +444,14 @@
 
         default:
           // TODO:
-          // (1) error mapping to some useful strings
-          // (2) this code is not invoked in some cases, e.g. for <script> tags
-          //     with invalid "src".  so need to investigate:
-          //     (a) what errors are covered here, and
-          //     (b) how to cover the remaining ones we need.
-          data.error = 'Error ' + statusCode;
+          // this code is not invoked in some cases, e.g. for <script> tags
+          // with invalid "src".  so need to investigate:
+          // (a) what errors are covered here, and
+          // (b) how to cover the remaining ones we need.
+          data.error = Utils.mapHttpError(statusCode);
           this.requestData.monitor.onErrorOccurred.fire([ data ]);
           break;
       }
-      /*
-      var err = Mapping.mapHttpError(statusCode);
-      var ar = this.apicaRequest;
-      ar.errorCode = err.code;
-      ar.errorMsg = err.msg;
-      */
     }
 
     return this.originalListener.onStopRequest(request, context, statusCode);

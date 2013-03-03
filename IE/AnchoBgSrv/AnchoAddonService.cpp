@@ -30,6 +30,8 @@ struct CookieNotificationCallback: public ACookieCallbackFunctor
 };
 
 
+
+
 /*============================================================================
  * class CAnchoAddonService
  */
@@ -51,6 +53,7 @@ HRESULT CAnchoAddonService::get_cookieManager(LPDISPATCH* ppRet)
 //
 HRESULT CAnchoAddonService::invokeExternalEventObject(BSTR aExtensionId, BSTR aEventName, LPDISPATCH aArgs, VARIANT* aRet)
 {
+  ENSURE_RETVAL(aRet);
   CAnchoAddonBackgroundComObject* pObject = NULL;
 
   BackgroundObjectsMap::iterator it = m_BackgroundObjects.find(std::wstring(aExtensionId, SysStringLen(aExtensionId)));
@@ -132,6 +135,7 @@ HRESULT CAnchoAddonService::createTabImpl(CIDispatchHelper &aProperties, ATabCre
 //
 HRESULT CAnchoAddonService::reloadTab(INT aTabId)
 {
+  CSLock lock(mRuntimesCriticalSection);
   RuntimeMap::iterator it = m_Runtimes.find(aTabId);
   if (it != m_Runtimes.end()) {
     ATLASSERT(it->second.runtime);
@@ -160,6 +164,7 @@ HRESULT CAnchoAddonService::removeTabs(LPDISPATCH aTabs, LPDISPATCH aCallback)
 //
 HRESULT CAnchoAddonService::removeTab(INT aTabId, LPDISPATCH aCallback)
 {
+  CSLock lock(mRuntimesCriticalSection);
   RuntimeMap::iterator it = m_Runtimes.find(aTabId);
   if (it != m_Runtimes.end()) {
     ATLASSERT(it->second.runtime);
@@ -181,6 +186,7 @@ HRESULT CAnchoAddonService::removeTab(INT aTabId, LPDISPATCH aCallback)
 //
 HRESULT CAnchoAddonService::updateTab(INT aTabId, LPDISPATCH aProperties)
 {
+  CSLock lock(mRuntimesCriticalSection);
   RuntimeMap::iterator it = m_Runtimes.find(aTabId);
   if (it != m_Runtimes.end()) {
     ATLASSERT(it->second.runtime);
@@ -193,18 +199,24 @@ HRESULT CAnchoAddonService::updateTab(INT aTabId, LPDISPATCH aProperties)
 //
 HRESULT CAnchoAddonService::getTabInfo(INT aTabId, LPDISPATCH aCreator, VARIANT* aRet)
 {
-  HRESULT hr = createIDispatchFromCreator(aCreator, aRet);
+  ENSURE_RETVAL(aRet);
+  CComVariant result;
+  HRESULT hr = createIDispatchFromCreator(aCreator, &result);
   if (hr != S_OK) {
     return hr;
   }
-
+  CSLock lock(mRuntimesCriticalSection);
   RuntimeMap::iterator it = m_Runtimes.find(aTabId);
   if (it != m_Runtimes.end()) {
     ATLASSERT(it->second.runtime);
-    return it->second.runtime->fillTabInfo(aRet);
+    hr = it->second.runtime->fillTabInfo(&result);
+    if (hr == S_OK) {
+      VariantCopy(aRet, &result);
+    }
+  } else {
+    VariantClear(aRet);
   }
-  aRet->vt = VT_EMPTY;
-  return S_OK;
+  return hr;
 }
 
 //----------------------------------------------------------------------------
@@ -232,7 +244,11 @@ HRESULT CAnchoAddonService::queryTabs(LPDISPATCH aQueryInfo, LPDISPATCH aCreator
 
 
   VariantVector infos;
-  std::for_each(m_Runtimes.begin(), m_Runtimes.end(), QueryTabFunctor(infos, aCreator, *this));
+
+  {
+    CSLock lock(mRuntimesCriticalSection);
+    std::for_each(m_Runtimes.begin(), m_Runtimes.end(), QueryTabFunctor(infos, aCreator, *this));
+  }
   return constructSafeArrayFromVector(infos, *aRet);
 }
 //----------------------------------------------------------------------------
@@ -240,6 +256,7 @@ HRESULT CAnchoAddonService::queryTabs(LPDISPATCH aQueryInfo, LPDISPATCH aCreator
 HRESULT CAnchoAddonService::executeScript(BSTR aExtensionID, INT aTabID, BSTR aCode, BOOL aFileSpecified, BOOL aInAllFrames)
 {
   if (aInAllFrames) {
+    CSLock lock(mRuntimesCriticalSection);
     //TODO: gather results
     for (RuntimeMap::iterator it = m_Runtimes.begin(); it != m_Runtimes.end(); ++it) {
       executeScriptInTab(aExtensionID, it->first, aCode, aFileSpecified);
@@ -255,7 +272,8 @@ STDMETHODIMP CAnchoAddonService::getBrowserActions(VARIANT* aBrowserActionsArray
 {
   ENSURE_RETVAL(aBrowserActionsArray);
 
-  return constructSafeArrayFromVector(m_BrowserActionInfos, *aBrowserActionsArray);
+  CComVariant tmp(m_BrowserActionInfos.p);
+  return tmp.Detach(aBrowserActionsArray);
 }
 //----------------------------------------------------------------------------
 //
@@ -281,7 +299,16 @@ HRESULT CAnchoAddonService::addBrowserActionInfo(LPDISPATCH aBrowserActionInfo)
   if (!aBrowserActionInfo) {
     return E_POINTER;
   }
-  m_BrowserActionInfos.push_back(CComVariant(aBrowserActionInfo));
+
+  m_BrowserActionInfos->push_back(CComVariant(aBrowserActionInfo));
+
+  {
+    CSLock lock(mRuntimesCriticalSection);
+    for (RuntimeMap::iterator it = m_Runtimes.begin(); it != m_Runtimes.end(); ++it) {;
+      ATLASSERT(it->second.runtime);
+      it->second.runtime->showBrowserActionBar(TRUE);
+    }
+  }
   return S_OK;
 }
 
@@ -289,6 +316,7 @@ HRESULT CAnchoAddonService::addBrowserActionInfo(LPDISPATCH aBrowserActionInfo)
 //
 HRESULT CAnchoAddonService::executeScriptInTab(BSTR aExtensionID, INT aTabID, BSTR aCode, BOOL aFileSpecified)
 {
+  CSLock lock(mRuntimesCriticalSection);
   RuntimeMap::iterator it = m_Runtimes.find(aTabID);
   if (it != m_Runtimes.end()) {
     it->second.runtime->executeScript(aExtensionID, aCode, aFileSpecified);
@@ -508,23 +536,13 @@ STDMETHODIMP CAnchoAddonService::getCurrentWindowId(INT *aWinId)
   return E_FAIL;
 }
 
+
 //----------------------------------------------------------------------------
 //
 HWND CAnchoAddonService::getCurrentWindowHWND()
 {
-  HWND hIEFrame = NULL;
-  while(hIEFrame = ::FindWindowEx(NULL, hIEFrame, L"IEFrame", NULL)) {
-    WINDOWINFO winInfo;
-    winInfo.cbSize = sizeof(WINDOWINFO);
-    BOOL res = GetWindowInfo(hIEFrame, &winInfo);
-    if (!res) {
-      continue;
-    }
-    if (winInfo.dwWindowStatus & WS_ACTIVECAPTION) {
-      return hIEFrame;
-    }
-  }
-  return NULL;
+  //FindWindowEx returns windows in z-order - the first one is also the top one
+  return ::FindWindowEx(NULL, NULL, L"IEFrame", NULL);
 }
 //----------------------------------------------------------------------------
 //
@@ -551,6 +569,9 @@ HRESULT CAnchoAddonService::FinalConstruct()
   pCookiesManager->startWatching();
 
   m_Cookies = pCookiesManager;
+
+  IF_FAILED_RET(SimpleJSArray::createInstance(m_BrowserActionInfos));
+
   return S_OK;
 }
 
@@ -621,7 +642,7 @@ STDMETHODIMP CAnchoAddonService::GetModulePath(BSTR * pbsPath)
 }
 //----------------------------------------------------------------------------
 //
-STDMETHODIMP CAnchoAddonService::registerRuntime(INT aFrameTab, IAnchoRuntime * aRuntime, INT *aTabID)
+STDMETHODIMP CAnchoAddonService::registerRuntime(INT aFrameTab, IAnchoRuntime * aRuntime, ULONG aHeartBeat, INT *aTabID)
 {
   if (aFrameTab == 0) {
     return E_FAIL;
@@ -630,14 +651,23 @@ STDMETHODIMP CAnchoAddonService::registerRuntime(INT aFrameTab, IAnchoRuntime * 
 
   *aTabID = getFrameTabID(aFrameTab);
 
-  m_Runtimes[*aTabID] = RuntimeRecord(aRuntime);
+  {
+    CSLock lock(mRuntimesCriticalSection);
+    m_Runtimes[*aTabID] = RuntimeRecord(aRuntime, aHeartBeat);
+  }
   ATLTRACE(L"ADDON SERVICE - registering tab: %d\n", *aTabID);
+
+  if (!mBHOHeartbeatTimer.isRunning()) {
+    mBHOHeartbeatTimer.initialize(&CAnchoAddonService::checkBHOConnections, this, 1000);
+    mShouldCheckBHOConnections = true;
+  }
   return S_OK;
 }
 //----------------------------------------------------------------------------
 //
 STDMETHODIMP CAnchoAddonService::unregisterRuntime(INT aTabID)
 {
+  CSLock lock(mRuntimesCriticalSection);
   RuntimeMap::iterator it = m_Runtimes.find(aTabID);
   if (it != m_Runtimes.end()) {
     CIDispatchHelper callback = it->second.callback;
@@ -649,8 +679,36 @@ STDMETHODIMP CAnchoAddonService::unregisterRuntime(INT aTabID)
     }
   }
   ATLTRACE(L"ADDON SERVICE - unregistering tab: %d\n", aTabID);
+  //if we cleanly unregistered all runtimes turn off the heartbeat
+  if (m_Runtimes.empty()) {
+    mShouldCheckBHOConnections = false;
+    mBHOHeartbeatTimer.finalize();
+  }
   return S_OK;
 }
+//----------------------------------------------------------------------------
+//
+void CAnchoAddonService::checkBHOConnections()
+{
+  CSLock lock(mRuntimesCriticalSection);
+  if (!mShouldCheckBHOConnections) {
+    return;
+  }
+  RuntimeMap::iterator it = m_Runtimes.begin();
+  RuntimeMap::iterator endIter =  m_Runtimes.end();
+  while (it != endIter) {
+    ATLASSERT(it->second.runtime);
+    if (!it->second.hearbeatMaster.isAlive()) {
+      m_Runtimes.erase(it++);
+    } else {
+      ++it;
+    }
+  }
+  if (m_Runtimes.empty()) {
+    TerminateProcess(GetCurrentProcess(), 0);
+  }
+}
+
 //----------------------------------------------------------------------------
 //
 STDMETHODIMP CAnchoAddonService::createTabNotification(INT aTabID, INT aRequestID)
@@ -669,12 +727,11 @@ STDMETHODIMP CAnchoAddonService::createTabNotification(INT aTabID, INT aRequestI
 }
 //----------------------------------------------------------------------------
 //
-STDMETHODIMP CAnchoAddonService::invokeEventObjectInAllExtensions(BSTR aEventName, LPDISPATCH aArgs)
+STDMETHODIMP CAnchoAddonService::invokeEventObjectInAllExtensions(BSTR aEventName, LPDISPATCH aArgs, VARIANT* aRet)
 {
   for (BackgroundObjectsMap::iterator it = m_BackgroundObjects.begin(); it != m_BackgroundObjects.end(); ++it) {
-    CComVariant retVal;
     CComBSTR id(it->first.c_str());
-    invokeExternalEventObject(id, aEventName, aArgs, &retVal);
+    invokeExternalEventObject(id, aEventName, aArgs, aRet);
   }
   return S_OK;
 }
@@ -709,12 +766,14 @@ STDMETHODIMP CAnchoAddonService::registerBrowserActionToolbar(INT aFrameTab, BST
   CString url;
   url.Format(L"res://%s/BROWSER_ACTION_TOOLBAR.HTML", appPath);
   *aUrl = url.AllocSysString();
+  ATLTRACE(L"ANCHO SERVICE: registered browser action toolbar; tab: %d\n", *aTabId);
   return S_OK;
 }
 //----------------------------------------------------------------------------
 //
 STDMETHODIMP CAnchoAddonService::unregisterBrowserActionToolbar(INT aTabId)
 {
+  ATLTRACE(L"ANCHO SERVICE: unregistering browser action toolbar; tab: %d\n", aTabId);
   m_BrowserActionCallbacks.erase(aTabId);
   return S_OK;
 }

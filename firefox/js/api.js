@@ -5,10 +5,7 @@
   var TabsAPI = require('./tabs');
   var WindowsAPI = require('./windows');
   var WebRequestAPI = require('./webRequest');
-  // FIXME: browserAction API disabled for now:
-  // + windowWatcher used there doesn't load: improper use of new Event()
-  // + too many TODOs there for now...
-  // var BrowserActionAPI = require('./browserAction');
+  var BrowserActionAPI = require('./browserAction');
   var CookiesAPI = require('./cookies');
   var HistoryAPI = require('./history');
   var DebuggerAPI = require('./debugger');
@@ -22,6 +19,21 @@
   // System APIs
   var ConsoleAPI = require('./console');
 
+  function exposeProperties(obj) {
+    var exposedProps = {};
+    for (var prop in obj) {
+      if (prop && prop[0] === '_') {
+        // By convention, prefixing with a slash means private property.
+        continue;
+      }
+      exposedProps[prop] = 'r';
+      if ('object' === typeof(obj[prop])) {
+        exposeProperties(obj[prop]);
+      }
+    }
+    obj.__exposedProps__ = exposedProps;
+  }
+
   // export
   function API(contentWindow, extensionState) {
 
@@ -30,7 +42,7 @@
       tabs: new TabsAPI(extensionState, contentWindow),
       windows: new WindowsAPI(extensionState, contentWindow),
       webRequest: new WebRequestAPI(extensionState, contentWindow),
-      // browserAction: new BrowserActionAPI(extensionState, contentWindow),
+      browserAction: new BrowserActionAPI(extensionState, contentWindow),
       cookies: new CookiesAPI(extensionState, contentWindow),
       history: new HistoryAPI(extensionState, contentWindow),
       debugger: new DebuggerAPI(extensionState, contentWindow),
@@ -40,15 +52,17 @@
         sync: new StorageAPI(extensionState, contentWindow, 'sync')
       }
     };
+    exposeProperties(this.chrome);
 
     this.ancho = {
       toolbar: new ToolbarAPI(extensionState, contentWindow),
       clipboard: new ClipboardAPI(extensionState, contentWindow),
       external: new ExternalAPI(extensionState, contentWindow)
     };
+    exposeProperties(this.ancho);
 
     this.console = new ConsoleAPI(extensionState, contentWindow);
-
+    exposeProperties(this.console);
   }
 
   module.exports = API;

@@ -18,6 +18,7 @@
       return results;
     }
 
+
     this.addListener = function(listener) {
       listeners.push(listener);
       // register local notification function only if we have listeners

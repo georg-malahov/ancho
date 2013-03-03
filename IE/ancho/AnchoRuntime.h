@@ -8,7 +8,6 @@
 #include "resource.h"       // main symbols
 
 #include "ancho_i.h"
-#include <map>
 
 #if defined(_WIN32_WCE) && !defined(_CE_DCOM) && !defined(_CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA)
 #error "Single-threaded COM objects are not properly supported on Windows CE platform, such as the Windows Mobile platforms that do not include full DCOM support. Define _CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA to force ATL to support creating single-thread COM object's and allow use of it's single-threaded COM object implementations. The threading model in your rgs file was set to 'Free' as that is the only threading model supported in non DCOM Windows CE platforms."
@@ -29,7 +28,17 @@ class ATL_NO_VTABLE CAnchoRuntime :
   public TAnchoBrowserEvents,
   public IAnchoRuntime
 {
-  typedef std::map<std::wstring, CComPtr<IWebBrowser2> > FrameMap;
+  struct FrameRecord
+  {
+    FrameRecord(CComPtr<IWebBrowser2> aBrowser = CComPtr<IWebBrowser2>(), bool aIsTopLevel = false)
+      : browser(aBrowser), isTopLevel(aIsTopLevel)
+    { }
+
+    CComPtr<IWebBrowser2> browser;
+    bool isTopLevel;
+  };
+
+  typedef std::map<std::wstring, FrameRecord> FrameMap;
 public:
   // -------------------------------------------------------------------------
   // ctor
@@ -60,6 +69,9 @@ public:
     SINK_ENTRY_EX(2, IID_DAnchoBrowserEvents, 1, OnFrameStart)
     SINK_ENTRY_EX(2, IID_DAnchoBrowserEvents, 2, OnFrameEnd)
     SINK_ENTRY_EX(2, IID_DAnchoBrowserEvents, 3, OnFrameRedirect)
+
+    SINK_ENTRY_EX(2, IID_DAnchoBrowserEvents, 4, OnBeforeRequest)
+    SINK_ENTRY_EX(2, IID_DAnchoBrowserEvents, 5, OnBeforeSendHeaders)
   END_SINK_MAP()
 
   // -------------------------------------------------------------------------
@@ -87,6 +99,7 @@ public:
   STDMETHOD(executeScript)(BSTR aExtensionId, BSTR aCode, INT aFileSpecified);
   STDMETHOD(updateTab)(LPDISPATCH aProperties);
   STDMETHOD(fillTabInfo)(VARIANT* aInfo);
+  STDMETHOD(showBrowserActionBar)(INT aShow);
 
   // DWebBrowserEvents2 methods
   STDMETHOD_(void, OnNavigateComplete)(LPDISPATCH pDispatch, VARIANT *URL);
@@ -102,6 +115,10 @@ public:
   STDMETHOD(OnFrameEnd)(BSTR bstrUrl, VARIANT_BOOL bIsMainFrame);
   STDMETHOD(OnFrameRedirect)(BSTR bstrOldUrl, BSTR bstrNewUrl);
 
+  STDMETHOD(OnBeforeRequest)(VARIANT aReporter);
+  STDMETHOD(OnBeforeSendHeaders)(VARIANT aReporter);
+
+
 private:
   // -------------------------------------------------------------------------
   // Methods
@@ -111,6 +128,22 @@ private:
   HRESULT Cleanup();
   HRESULT InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL bIsRefreshingMainFrame, documentLoadPhase aPhase);
   HRESULT InitializeExtensionScripting(BSTR bstrUrl);
+
+  struct BeforeRequestInfo
+  {
+    bool cancel;
+    bool redirect;
+    std::wstring newUrl;
+  };
+  HRESULT fireOnBeforeRequest(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeRequestInfo &aOutInfo);
+
+  struct BeforeSendHeadersInfo
+  {
+    bool modifyHeaders;
+    std::wstring headers;
+  };
+  HRESULT fireOnBeforeSendHeaders(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeSendHeadersInfo &aOutInfo);
+
 
   HWND getTabWindow();
   HWND getFrameTabWindow()
@@ -127,7 +160,7 @@ private:
   CComQIPtr<IWebBrowser2>                 m_pWebBrowser;
   CComPtr<IAnchoAddonService>             m_pAnchoService;
   AddonMap                                m_Addons;
-  int m_TabID;
+  int                                     m_TabID;
   CComPtr<DAnchoBrowserEvents>            m_pBrowserEventSource;
   DWORD                                   m_WebBrowserEventsCookie;
   DWORD                                   m_AnchoBrowserEventsCookie;
@@ -135,6 +168,8 @@ private:
 
   bool                                    m_ExtensionPageAPIPrepared;
   bool                                    m_IsExtensionPage;
+
+  HeartbeatSlave                          m_HeartBeatSlave;
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(AnchoRuntime), CAnchoRuntime)

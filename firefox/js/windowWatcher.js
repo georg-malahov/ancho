@@ -3,7 +3,50 @@
   var Cu = Components.utils;
   Cu.import('resource://gre/modules/Services.jsm');
 
-  var Event = require('./event');
+  const BROWSER_WINDOW_TYPE = 'navigator:browser';
+
+  var Event = function() {
+    this.callbacks = [];
+  };
+  Event.prototype.addListener = function(callback) {
+    this.callbacks.push(callback);
+    return this;
+  };
+
+  Event.prototype.removeListener = function(callback) {
+
+    var index = this.callbacks.indexOf(callback);
+    if (index >= 0) {
+      this.callbacks.splice(index, 1);
+    }
+    return this;
+  };
+
+  Event.prototype.clearListeners = function() {
+    this.callbacks = [];
+    return this;
+  };
+
+  Event.prototype.hasListeners = function() {
+    return this.callbacks.length > 0;
+  };
+
+  Event.prototype.fire = function() {
+    var args = arguments;
+    var results = [];
+    for ( var i = 0; i < this.callbacks.length; i++) {
+      var callback = this.callbacks[i];
+      if (callback) {
+        var result = callback.apply(callback, args);
+        results.push(result);
+      }
+    }
+    return results;
+  };
+
+  function _isBrowserWindow(browserWindow) {
+    return BROWSER_WINDOW_TYPE === browserWindow.document.documentElement.getAttribute('windowtype');
+  }
 
   var WindowWatcherImpl = function() {
     this.loaders = new Event();
@@ -28,17 +71,21 @@
       var self = this;
       this.notificationListener = function(browserWindow, topic) {
         if (topic === "domwindowopened") {
-          if ('complete' === browserWindow.document.readyState) {
+          if ('complete' === browserWindow.document.readyState && _isBrowserWindow(browserWindow)) {
             self.loaders.fire(browserWindow);
           } else {
             browserWindow.addEventListener('load', function() {
               browserWindow.removeEventListener('load', arguments.callee, false);
-              self.loaders.fire(browserWindow);
+              if (_isBrowserWindow(browserWindow)) {
+                self.loaders.fire(browserWindow);
+              }
             });
           }
         }
         if (topic === "domwindowclosed") {
-          self.unloaders.fire(browserWindow);
+          if (_isBrowserWindow(browserWindow)) {
+            self.unloaders.fire(browserWindow);
+          }
         }
       };
       Services.ww.registerNotification(this.notificationListener);

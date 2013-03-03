@@ -9,9 +9,9 @@
 
   var StorageAPI = function(extensionState, contentWindow, storageSpace) {
     var dbFile = FileUtils.getFile('ProfD', ['ancho_storage.sqlite3']);
-    this.connection = Services.storage.openDatabase(dbFile); // create the file if it does not exist
-    this.tableName = extensionState.id.replace(/[^A-Za-z]/g, '_') + '_' + storageSpace; // no sanitization necessary
-    this.connection.executeSimpleSQL('CREATE TABLE IF NOT EXISTS '+this.tableName+' ( key TEXT PRIMARY KEY, value TEXT )');
+    this._connection = Services.storage.openDatabase(dbFile); // create the file if it does not exist
+    this._tableName = extensionState.id.replace(/[^A-Za-z]/g, '_') + '_' + storageSpace; // no sanitization necessary
+    this._connection.executeSimpleSQL('CREATE TABLE IF NOT EXISTS '+this._tableName+' ( key TEXT PRIMARY KEY, value TEXT )');
     // A separate CREATE INDEX command for keys not needed:
     // http://stackoverflow.com/questions/3379292/is-an-index-needed-for-a-primary-key-in-sqlite
   };
@@ -20,12 +20,32 @@
     throw new Error('Storage error: ' + err.message);
   }
 
-  StorageAPI.prototype = {
+  function _prepareArrayArgument(arg, results) {
+    if (Array.isArray(arg)) {
+      return arg;
+    } else if (typeof arg === 'string') {
+      return [arg];
+    } else if (typeof arg === 'object' && results) {
+      var array = [];
+      for (var item in arg) {
+        array.push(item);
+        results[item] = arg[item]; // preparing defaults
+      }
+      return array;
+    } else {
+      // Signal error.
+      return null;
+    }
+  }
 
+  StorageAPI.prototype = {
     get: function(keys, callback) {
       if (keys) {
-        var myKeys = [];
         var results = {};
+        var myKeys = _prepareArrayArgument(keys, results);
+        if (!myKeys) {
+          throw new Error("Invocation of method get doesn't match definition");
+        }
 
         var callCallback = true;
         var myCallback = function(results) {
@@ -34,22 +54,9 @@
             callback(results);
           }
         };
-
-        if (Array.isArray(keys)) {
-          myKeys = keys;
-        } else if (typeof keys == 'string') {
-          myKeys = [keys];
-        } else if (typeof keys == 'object') {
-          for (var key in keys) {
-            myKeys.push(key);
-            results[key] = keys[key]; // preparing defaults
-          }
-        } else {
-          throw new Error("Invocation of get doesn't match definition get(optional string or array or object keys, function callback)");
-        }
-
         if (myKeys.length) {
-          var statement = this.connection.createStatement('SELECT key, value FROM '+this.tableName+' WHERE key IN (:key)');
+          var statement =
+            this._connection.createStatement('SELECT key, value FROM '+this._tableName+' WHERE key IN (:key)');
           var par, params = statement.newBindingParamsArray();
           for (var i=0; i<myKeys.length; i++) {
             par = params.newBindingParams();
@@ -72,7 +79,7 @@
             // handleResult is not called with the empty resultRows
             // so we have to call back in this case
             handleCompletion: function(reason) {
-              if (reason == Ci.mozIStorageStatementCallback.REASON_FINISHED) {
+              if (reason === Ci.mozIStorageStatementCallback.REASON_FINISHED) {
                 myCallback(results);
               } else {
                 dbError({ message: 'select statement not finished' });
@@ -91,7 +98,8 @@
 
     set: function(items, callback) {
       if (typeof items === 'object') {
-        var statement = this.connection.createStatement('REPLACE INTO '+this.tableName+' (key, value) VALUES (:key, :value)');
+        var statement =
+          this._connection.createStatement('REPLACE INTO '+this._tableName+' (key, value) VALUES (:key, :value)');
 
         var par, params = statement.newBindingParamsArray();
         for (var key in items) {
@@ -104,7 +112,7 @@
 
         statement.executeAsync({
           handleCompletion: function(reason) {
-            if (reason == Ci.mozIStorageStatementCallback.REASON_FINISHED) {
+            if (reason === Ci.mozIStorageStatementCallback.REASON_FINISHED) {
               if (typeof callback === 'function') {
                 callback();
               }
@@ -117,7 +125,41 @@
         });
 
       } else {
-        throw new Error("Invocation of set doesn't match definition set(object items, optional function callback)");
+        throw new Error("Invocation of set doesn't match definition");
+      }
+    },
+
+    remove: function(keys, callback) {
+      if (keys) {
+        var results = {};
+        var myKeys = _prepareArrayArgument(keys, results);
+        if (!myKeys) {
+          throw new Error("Invocation of method remove doesn't match definition");
+        }
+        var statement =
+          this._connection.createStatement('DELETE FROM '+this._tableName+' WHERE key IN (:key)');
+
+        var par, params = statement.newBindingParamsArray();
+        for (var i=0; i<myKeys.length; i++) {
+          par = params.newBindingParams();
+          par.bindByName('key', myKeys[i]);
+          params.addParams(par);
+        }
+        statement.bindParameters(params);
+
+        statement.executeAsync({
+          handleCompletion: function(reason) {
+            if (reason === Ci.mozIStorageStatementCallback.REASON_FINISHED) {
+              if (typeof callback === 'function') {
+                callback();
+              }
+            } else {
+              dbError({ message: 'delete statement not finished' });
+            }
+          },
+
+          handleError: dbError
+        });
       }
     }
   };

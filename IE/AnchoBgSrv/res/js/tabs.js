@@ -1,9 +1,9 @@
 /******************************************************************************
- * tabs.js
- * Part of Ancho browser extension framework
- * Implements chrome.tabs
- * Copyright 2012 Salsita software (http://www.salsitasoft.com).
- ******************************************************************************/
+* tabs.js
+* Part of Ancho browser extension framework
+* Implements chrome.tabs
+* Copyright 2012 Salsita software (http://www.salsitasoft.com).
+******************************************************************************/
 
 //******************************************************************************
 //* requires
@@ -38,7 +38,7 @@ var removeCallbackWrapper = function(aTabs, aCallback) {
   this.singleTabRemoveCallback = function(aTabID) {
     console.debug("removeSingleTab callback for tab: " + aTabID);
     --count;
-    if (count == 0) {
+    if (count == 0 && callback) {
       callback();
     }
   }
@@ -183,7 +183,7 @@ var Tabs = function(instanceID) {
       }
       return;
     }
-    get(instanceID, args['callback']);
+    this.get(instanceID, args['callback']);
   };
 
   //----------------------------------------------------------------------------

@@ -27,10 +27,10 @@ interface IAnchoAddonService : IUnknown
   HRESULT GetAddonBackground([in] BSTR bsID, [out, retval] IAnchoAddonBackground ** ppRet);
   HRESULT GetModulePath([out, retval] BSTR * pbsPath);
 
-  HRESULT registerRuntime([in] INT aFrameTab, [in] IAnchoRuntime * aRuntime, [out, retval] INT *aTabID);
+  HRESULT registerRuntime([in] INT aFrameTab, [in] IAnchoRuntime * aRuntime, [in] ULONG aHeartBeat, [out, retval] INT *aTabID);
   HRESULT unregisterRuntime([in] INT aTabID);
   HRESULT createTabNotification([in] INT aTabID, [in] INT aRequestID);
-  HRESULT invokeEventObjectInAllExtensions([in] BSTR aEventName, [in] LPDISPATCH aArgs);
+  HRESULT invokeEventObjectInAllExtensions([in] BSTR aEventName, [in] LPDISPATCH aArgs, [out] VARIANT* aRet);
 
   HRESULT webBrowserReady();
 
@@ -146,6 +146,7 @@ library AnchoBgSrvLib
     HRESULT executeScript([in] BSTR aExtensionId, [in] BSTR aCode, [in] INT aFileSpecified);
     HRESULT updateTab([in] LPDISPATCH aProperties);
     HRESULT fillTabInfo([in] VARIANT* aInfo);
+    HRESULT showBrowserActionBar([in] INT aShow);
   };
 
   /*==========================================================================*/

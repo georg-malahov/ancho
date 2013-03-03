@@ -39,8 +39,10 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
   // set service API inteface
   m_ServiceApi = pServiceApi;
 
+#ifndef ANCHO_DISABLE_LOGWINDOW
   // create logger window
   IF_FAILED_RET(CLogWindow::CreateLogWindow(&m_LogWindow.p));
+#endif //ANCHO_DISABLE_LOGWINDOW
 
   // create a magpie instance
 #ifdef MAGPIE_REGISTERED
@@ -71,8 +73,10 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
   // add a loder for scripts in this exe file
   IF_FAILED_RET(m_Magpie->AddResourceScriptLoader((ULONG)_AtlModule.GetResourceInstance()));
 
+#ifndef ANCHO_DISABLE_LOGWINDOW
   // advise logger
   IF_FAILED_RET(AtlAdvise(m_Magpie, (IUnknown*)(CAnchoAddonBackgroundLogger*)(this), DIID__IMagpieLoggerEvents, &m_dwMagpieSinkCookie));
+#endif //ANCHO_DISABLE_LOGWINDOW
 
   // load manifest
   CString sManifestFilename;
@@ -127,11 +131,13 @@ void CAnchoBackgroundAPI::UnInit()
   }
   if (m_Magpie)
   {
+#ifndef ANCHO_DISABLE_LOGWINDOW
     if (m_dwMagpieSinkCookie)
     {
       AtlUnadvise(m_Magpie, DIID__IMagpieLoggerEvents, m_dwMagpieSinkCookie);
       m_dwMagpieSinkCookie = 0;
     }
+#endif
     m_Magpie->Shutdown();
     m_Magpie.Release();
   }
@@ -391,7 +397,7 @@ STDMETHODIMP CAnchoBackgroundAPI::callFunction(LPDISPATCH aFunction, LPDISPATCH 
   CIDispatchHelper function(aFunction);
   VariantVector args;
 
-  IF_FAILED_RET(addJSArrayToVariantVector(aArgs, args));
+  IF_FAILED_RET(addJSArrayToVariantVector(aArgs, args, true));
   return function.InvokeN((DISPID)0, args.size()>0? &(args[0]): NULL, args.size(), aRet);
 }
 
@@ -404,15 +410,11 @@ STDMETHODIMP CAnchoBackgroundAPI::invokeEventObject(BSTR aEventName, INT aSelect
   VariantVector args;
   VariantVector results;
 
-  HRESULT hr = addJSArrayToVariantVector(aArgs, args);
-  if (FAILED(hr)) {
-      return hr;
-  }
-  hr = invokeEvent(aEventName, aSelectedInstance, aSkipInstance != FALSE, args, results);
-  if (FAILED(hr)) {
-      return hr;
-  }
-  return constructSafeArrayFromVector(results, *aRet);
+  IF_FAILED_RET(addJSArrayToVariantVector(aArgs, args, true));
+
+  IF_FAILED_RET(invokeEvent(aEventName, aSelectedInstance, aSkipInstance != FALSE, args, results));
+
+  return appendVectorToSafeArray(results, *aRet);
 }
 
 //----------------------------------------------------------------------------

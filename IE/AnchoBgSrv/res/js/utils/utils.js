@@ -11,13 +11,23 @@ var Event = require("events.js").Event;
 
 exports.EventFactory = {
 
-  createEvents : function(targetAPI, instanceID, apiName, eventNames) {
+  /**
+   * Creates specified event objects by invoking provided event constructor
+   **/
+  createEventsEx: function(targetAPI, instanceID, apiName, eventNames, EventConstructor) {
     for (i = 0; i < eventNames.length; ++i) {
-      targetAPI[eventNames[i]] = new Event(apiName + '.' + eventNames[i], instanceID);
+      targetAPI[eventNames[i]] = new EventConstructor(apiName + '.' + eventNames[i], instanceID);
     }
   },
 
-  releaseEvents : function(instanceID, apiName, eventNames) {
+  /**
+   * Creates specified event objects by invoking default event constructor
+   **/
+  createEvents: function(targetAPI, instanceID, apiName, eventNames) {
+    this.createEventsEx(targetAPI, instanceID, apiName, eventNames, Event);
+  },
+
+  releaseEvents: function(instanceID, apiName, eventNames) {
     for (i = 0; i < eventNames.length; ++i) {
       addonAPI.removeEventObject(apiName + '.' + eventNames[i], instanceID);
     }
@@ -27,9 +37,6 @@ exports.EventFactory = {
 
 //Type checking utilities - instanceof and typeof are not working well when used
 //on objects from different script dispach instances
-exports.isArray = function(aArg) {
-  return Object.prototype.toString.call(aArg) === '[object Array]';
-}
 
 exports.isFunction = function(aArg) {
   return Object.prototype.toString.call(aArg) === '[object Function]'
@@ -41,7 +48,7 @@ exports.isObject = function(aArg) {
 }
 
 exports.isString = function(aArg) {
-  return Object.prototype.toString.call(aArg) === '[object String]';
+  return typeof(aArg) === 'string' || Object.prototype.toString.call(aArg) === '[object String]';
 }
 
 exports.isInteger = function(aArg) {
@@ -52,6 +59,20 @@ exports.isNumber = function(aArg) {
   return (typeof (aArg) === 'number');
 }
 
+exports.isArray = function(aArg) {
+  try {
+    //Interface checking is probably only safe way to determine if aArg is array like object
+    return aArg != undefined
+      && aArg != null
+      && !exports.isString(aArg)
+      && ("length" in aArg)
+      && ("push" in aArg);
+    //This is not usable for array like objects: return Object.prototype.toString.call(aArg) === '[object Array]';
+  } catch (e) {
+    return false;
+  }
+}
+
 exports.typeName = function(aArg) {
   if (aArg === undefined) {
     return undefined;
@@ -60,6 +81,7 @@ exports.typeName = function(aArg) {
   var typeCheckers = {
     'function': exports.isFunction,
     'number': exports.isNumber,
+    'string': exports.isString,
     'array': exports.isArray
   };
 
@@ -96,4 +118,20 @@ exports.stringColorRepresentation = function(aColor) {
     }
   }
   throw new Error('Unsupported color format');
+}
+
+/**
+ * Url checking routine - chrome url patterns
+ **/
+exports.matchUrl = function(aUrl, aPattern) {
+  if (!exports.isString(aUrl) || !exports.isString(aPattern)) {
+    throw new Error("Wrong arguments to 'matchUrl()'");
+  }
+  if (aPattern == '<all_urls>') {
+    return true;
+  }
+  var regexp = '^' + aPattern.replace(/\*/g, '.*') + '$';
+  regexp = new RegExp(regexp);
+
+  return regexp.test(aUrl);
 }
