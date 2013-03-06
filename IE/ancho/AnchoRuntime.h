@@ -169,7 +169,7 @@ private:
   bool                                    m_ExtensionPageAPIPrepared;
   bool                                    m_IsExtensionPage;
 
-  HeartbeatSlave                          m_HeartBeatSlave;
+  HeartbeatSlave                          m_HeartbeatSlave;
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(AnchoRuntime), CAnchoRuntime)

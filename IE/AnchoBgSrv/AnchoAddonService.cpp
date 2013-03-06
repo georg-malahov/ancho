@@ -654,6 +654,7 @@ STDMETHODIMP CAnchoAddonService::GetModulePath(BSTR * pbsPath)
 //
 STDMETHODIMP CAnchoAddonService::registerRuntime(INT aFrameTab, IAnchoRuntime * aRuntime, ULONG aHeartBeat, INT *aTabID)
 {
+  BEGIN_TRY_BLOCK;
   if (aFrameTab == 0) {
     return E_FAIL;
   }
@@ -668,15 +669,18 @@ STDMETHODIMP CAnchoAddonService::registerRuntime(INT aFrameTab, IAnchoRuntime * 
   ATLTRACE(L"ADDON SERVICE - registering tab: %d\n", *aTabID);
 
   if (!mBHOHeartbeatTimer.isRunning()) {
-    mBHOHeartbeatTimer.initialize(&CAnchoAddonService::checkBHOConnections, this, 1000);
-    mShouldCheckBHOConnections = true;
+    mBHOHeartbeatTimer.initialize(&CAnchoAddonService::checkBHOHeartbeat, this, 1000);
+    mBHOHeartbeatTimer.start();
+    mHeartbeatActive = true;
   }
   return S_OK;
+  END_TRY_BLOCK_CATCH_TO_HRESULT;
 }
 //----------------------------------------------------------------------------
 //
 STDMETHODIMP CAnchoAddonService::unregisterRuntime(INT aTabID)
 {
+  BEGIN_TRY_BLOCK;
   CSLock lock(mRuntimesCriticalSection);
   RuntimeMap::iterator it = m_Runtimes.find(aTabID);
   if (it != m_Runtimes.end()) {
@@ -691,17 +695,18 @@ STDMETHODIMP CAnchoAddonService::unregisterRuntime(INT aTabID)
   ATLTRACE(L"ADDON SERVICE - unregistering tab: %d\n", aTabID);
   //if we cleanly unregistered all runtimes turn off the heartbeat
   if (m_Runtimes.empty()) {
-    mShouldCheckBHOConnections = false;
-    mBHOHeartbeatTimer.finalize();
+    mHeartbeatActive = false;
+    mBHOHeartbeatTimer.stop();
   }
   return S_OK;
+  END_TRY_BLOCK_CATCH_TO_HRESULT;
 }
 //----------------------------------------------------------------------------
 //
-void CAnchoAddonService::checkBHOConnections()
+void CAnchoAddonService::checkBHOHeartbeat()
 {
   CSLock lock(mRuntimesCriticalSection);
-  if (!mShouldCheckBHOConnections) {
+  if (!mHeartbeatActive) {
     return;
   }
   RuntimeMap::iterator it = m_Runtimes.begin();

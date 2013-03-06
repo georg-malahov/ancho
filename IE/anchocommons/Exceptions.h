@@ -10,9 +10,11 @@ struct ENotAString: ECast { };
 struct ENotAnInt: ECast { };
 struct ENotADouble: ECast { };
 struct ENotABool: ECast { };
+struct EFail: std::exception { };
+struct EInvalidArgument: EFail { };
 
 struct EHResult: std::exception
-{ 
+{
   EHResult(HRESULT hr): mHResult(hr) {}
   HRESULT mHResult;
 };
@@ -31,9 +33,15 @@ inline HRESULT exceptionToHRESULT()
   } catch(ECast &) {
     ATLTRACE("ERROR: Wrong cast\n");
     return E_INVALIDARG;
+  } catch(EInvalidArgument &) {
+    ATLTRACE("ERROR: Invalid argument\n");
+    return E_INVALIDARG;
   } catch(EHResult &e) {
     ATLTRACE("ERROR: HRESULT = %d\n", e.mHResult);
     return e.mHResult;
+  } catch (EFail &) {
+    ATLTRACE("ERROR: Failure\n");
+    return E_FAIL;
   } catch (std::exception &e) {
     ATLTRACE("ERROR: %s\n", e.what());
     return E_FAIL;
