@@ -362,8 +362,18 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
 {
   CComBSTR rawUri;
   IF_FAILED_RET(pUri->GetRawUri(&rawUri));
-
   CComPtr<CAnchoProtocolSink> pSink = GetSink();
+
+  CComBSTR method;
+  BINDINFO bindInfo = {0};
+  bindInfo.cbSize = sizeof(BINDINFO);
+  DWORD grfBINDF = 0;
+  //When I move GetBindInfo() after __super::StartEx it crashes
+  if (SUCCEEDED(pOIBindInfo->GetBindInfo(&grfBINDF, &bindInfo))) {
+    method = getMethodNameFromBindInfo(bindInfo);
+  } else {
+    method = L"GET";
+  }
 
   IF_FAILED_RET(__super::StartEx(pUri, pOIProtSink, pOIBindInfo, grfPI, dwReserved));
 
@@ -378,16 +388,6 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
     IF_FAILED_RET(getEventsFromSink(pSink, rawUri, m_BrowserEvents));
   }
   if (m_BrowserEvents) {
-    CComBSTR method;
-    BINDINFO bindInfo = {0};
-    bindInfo.cbSize = sizeof(BINDINFO);
-    DWORD grfBINDF;
-    if (SUCCEEDED(pOIBindInfo->GetBindInfo(&grfBINDF, &bindInfo))) {
-      method = getMethodNameFromBindInfo(bindInfo);
-    } else {
-      method = L"GET";
-    }
-
     WebRequestReporterComObject * pNewObject = NULL;
     if (SUCCEEDED(WebRequestReporterComObject::CreateInstance(&pNewObject))) {
       CComPtr<IWebRequestReporter> reporter(pNewObject);
