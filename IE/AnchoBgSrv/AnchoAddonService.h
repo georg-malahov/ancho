@@ -33,6 +33,7 @@ struct CAnchoAddonServiceCallback
 struct ServiceTimer
 {
   typedef void (CAnchoAddonService::*ServiceMethod)();
+  struct ETimerFailure : EFail { };
 
   static void CALLBACK callback(void *aParameter, BOOLEAN aTimerOrWaitFired)
   {
@@ -51,36 +52,36 @@ struct ServiceTimer
 
   ~ServiceTimer()
   {
-    finalize();
+    stop();
   }
 
   void initialize(ServiceMethod aMethod, CAnchoAddonService *aInstance, unsigned long aPeriodMS, HANDLE aTimerQueue = NULL)
   {
-    finalize();
+    stop();
 
     if (!aMethod || !aInstance) {
-      ATLASSERT(false);
-      //Ancho_THROW();
+      ANCHO_THROW(EInvalidArgument());
     }
-
     mMethod = aMethod;
     mServiceInstance = aInstance;
 
     mTimerQueue = aTimerQueue;
     mPeriod = aPeriodMS;
+  }
 
+  void start()
+  {
     if (!CreateTimerQueueTimer(
       &mTimerHandle,
       mTimerQueue,
       (WAITORTIMERCALLBACK) &ServiceTimer::callback,
       (void*) this,
-      aPeriodMS,
-      aPeriodMS,
+      mPeriod,
+      mPeriod,
       WT_EXECUTEDEFAULT
       ))
     {
-      ATLASSERT(false);
-      //ANCHO_THROW();
+      ANCHO_THROW(ETimerFailure());
     }
   }
 
@@ -89,7 +90,7 @@ struct ServiceTimer
     return mTimerHandle != NULL;
   }
 
-  void finalize()
+  void stop()
   {
     if (isRunning()) {
       DeleteTimerQueueTimer(mTimerQueue, mTimerHandle, NULL);
@@ -118,7 +119,7 @@ class ATL_NO_VTABLE CAnchoAddonService :
 public:
   // -------------------------------------------------------------------------
   // ctor
-  CAnchoAddonService(): m_NextTabID(1), m_NextRequestID(1), mShouldCheckBHOConnections(false)
+  CAnchoAddonService(): m_NextTabID(1), m_NextRequestID(1), mHeartbeatActive(false)
   {
   }
 
@@ -269,7 +270,7 @@ private:
   typedef CComCritSecLock<CComAutoCriticalSection> CSLock;
 private:
   //private methods
-  void checkBHOConnections();
+  void checkBHOHeartbeat();
 
   IAnchoRuntime &getRuntime(int aTabId)
   {
@@ -289,7 +290,7 @@ private:
   BackgroundObjectsMap          m_BackgroundObjects;
   RuntimeMap                    m_Runtimes;
   CComAutoCriticalSection       mRuntimesCriticalSection;
-  volatile bool                 mShouldCheckBHOConnections;
+  volatile bool                 mHeartbeatActive; //whether we are we checking BHO heartbeat - remove all records if it crashed
 
   CreateTabCallbackMap          m_CreateTabCallbacks;
   CComPtr<ComSimpleJSArray>     m_BrowserActionInfos;

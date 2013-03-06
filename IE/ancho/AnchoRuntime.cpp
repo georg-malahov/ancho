@@ -112,12 +112,12 @@ HRESULT CAnchoRuntime::Init()
 
   AtlAdvise(m_pWebBrowser, (IUnknown *)(TWebBrowserEvents *) this, DIID_DWebBrowserEvents2, &m_WebBrowserEventsCookie);
 
-  ATLTRACE(L"ANCHO: runtime initialization - CoCreateInstace(CLSID_AnchoAddonService)\n");
+  ATLTRACE(L"ANCHO: runtime initialization - CoCreateInstance(CLSID_AnchoAddonService)\n");
   // create addon service object
   IF_FAILED_RET(m_pAnchoService.CoCreateInstance(CLSID_AnchoAddonService));
 
   // Registering tab in service - obtains tab id and assigns it to the tab as property
-  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, m_HeartBeatSlave.id(), &m_TabID));
+  IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, m_HeartbeatSlave.id(), &m_TabID));
   HWND hwnd;
   m_pWebBrowser->get_HWND((long*)&hwnd);
   ::SetProp(hwnd, s_AnchoTabIDPropertyName, (HANDLE)m_TabID);
