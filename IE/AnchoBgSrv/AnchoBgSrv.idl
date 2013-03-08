@@ -270,6 +270,11 @@ library AnchoBgSrvLib
     HRESULT invokeEventWithIDispatchArgument([in] BSTR aEventName, [in] LPDISPATCH aArg);
     HRESULT setIDispatchEventInvocationHandler([in] LPDISPATCH aFunction);
     HRESULT callFunction([in] LPDISPATCH aFunction, [in] LPDISPATCH aArgs, [out, retval] VARIANT* aRet);
+
+    HRESULT storageGet([in] BSTR aStorageType, [in] BSTR aKey, [out, retval] VARIANT* aValue);
+    HRESULT storageSet([in] BSTR aStorageType, [in] BSTR aKey, [in] BSTR aValue);
+    HRESULT storageRemove([in] BSTR aStorageType, [in] BSTR aKey);
+    HRESULT storageClear([in] BSTR aStorageType);
   };
 
 /*==========================================================================*/

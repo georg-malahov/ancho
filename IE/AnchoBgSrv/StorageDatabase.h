@@ -28,12 +28,14 @@ public:
 
   void getKeys(Keys &aKeys);
 
-  void open(const std::wstring & aPath);
+  void open(const std::wstring & aPath, const std::wstring & aTableName);
 
   void close();
 
+  void clear();
+
   bool isOpened() {
-    return m_Opened;
+    return mOpened;
   }
 protected:
   struct SQLiteStatement;
@@ -43,8 +45,8 @@ protected:
   void createTable();
   std::wstring escapeString(const std::wstring &aStr);
 
-  sqlite3 *m_pDatabase;
-  std::wstring m_Path;
-  std::wstring m_TableName;
-  bool m_Opened;
+  sqlite3 *mDatabase;
+  std::wstring mPath;
+  std::wstring mTableName;
+  bool mOpened;
 };

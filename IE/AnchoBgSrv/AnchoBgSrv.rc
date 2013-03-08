@@ -96,6 +96,8 @@ BROWSERACTION_SPEC.JS   HTML                    "res\\js\\specifications\\browse
 EXTENSION_SPEC.JS       HTML                    "res\\js\\specifications\\extension_spec.js"
 I18N_SPEC.JS            HTML                    "res\\js\\specifications\\i18n_spec.js"
 WEBREQUEST_SPEC.JS      HTML                    "res\\js\\specifications\\webRequest_spec.js"
+JSON.JS                 HTML                    "res\\js\\3rdParty\\json2.js"
+STORAGE_SPEC.JS         HTML                    "res\\js\\specifications\\storage_spec.js"
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////

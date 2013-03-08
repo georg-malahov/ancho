@@ -33,6 +33,8 @@
 #include <atltypes.h>
 
 #include <Wininet.h>
+#include <KnownFolders.h>
+#include <ShlObj.h>
 
 #include <anchocommons.h>
 

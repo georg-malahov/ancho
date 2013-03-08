@@ -10,6 +10,7 @@
 #include "AnchoBgSrv_i.h"
 #include "LogWindow.h"
 #include "BackgroundWindow.h"
+#include "StorageDatabase.h"
 
 #include <list>
 #include <vector>
@@ -111,6 +112,11 @@ public:
   STDMETHOD(setIDispatchEventInvocationHandler)(LPDISPATCH aFunction);
   STDMETHOD(callFunction)(LPDISPATCH aFunction, LPDISPATCH aArgs, VARIANT* pvRet);
 
+  STDMETHOD(storageGet)(BSTR aStorageType, BSTR aKey, VARIANT* aValue);
+  STDMETHOD(storageSet)(BSTR aStorageType, BSTR aKey, BSTR aValue);
+  STDMETHOD(storageRemove)(BSTR aStorageType, BSTR aKey);
+  STDMETHOD(storageClear)(BSTR aStorageType);
+
 
   // -------------------------------------------------------------------------
   // _IMagpieLoggerEvents methods
@@ -141,6 +147,8 @@ private:
 
   HRESULT loadAddonLocales(CString aPath);
   HRESULT appendJSONFileToVariableAssignment(CString aFileName, CString aVariableName, CString &aCode);
+
+  StorageDatabase & getStorageInstance(const std::wstring &aStorageType);
 private:
   // -------------------------------------------------------------------------
   // Private variables
@@ -174,5 +182,7 @@ private:
   CComPtr<IAnchoServiceApi>     m_ServiceApi;
 
   CIDispatchHelper              m_InvokeEventWithIDispatch;
+
+  StorageDatabase               mStorageLocalDb;
 };
 
