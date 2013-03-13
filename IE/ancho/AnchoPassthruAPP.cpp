@@ -409,10 +409,10 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
 //  Continue
 STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
 {
-  if (data->dwState >= ANCHO_SWITCH_BASE) {
+  if (data->cbData && data->dwState >= ANCHO_SWITCH_BASE) {
     if (data->dwState == ANCHO_SWITCH_REPORT_DATA && m_ProcessedReportData) {
-       // We already handled this;
-       return S_OK;
+      // We already handled this;
+      return S_OK;
     }
 
     CComPtr<CAnchoProtocolSink> pSink = GetSink();
