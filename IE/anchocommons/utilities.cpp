@@ -2,6 +2,7 @@
 #include "Exceptions.h"
 
 #include <ShlObj.h>
+#include <map>
 
 //----------------------------------------------------------------------------
 //
@@ -46,10 +47,18 @@ std::wstring stringFromGUID2(const GUID &aGUID)
 //----------------------------------------------------------------------------
 //
 typedef HRESULT (WINAPI* fGetKnownFolderPath)(REFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken, PWSTR *path);
+typedef std::map<int, std::wstring> SystemPathCache;
+SystemPathCache gCachedSystemPaths;
 
 std::wstring getSystemPathWithFallback(REFKNOWNFOLDERID aKnownFolderID, int aCLSID)
 {
-  HINSTANCE hShell32DLLInst = LoadLibrary(L"Shell32.dll");
+  static HINSTANCE hShell32DLLInst = LoadLibrary(L"Shell32.dll");
+
+  SystemPathCache::iterator it = gCachedSystemPaths.find(aCLSID);
+  if (it != gCachedSystemPaths.end()) {
+    return it->second;
+  }
+
   if (hShell32DLLInst)
   {
     // If we are on Vista or later we should use KNOWNFOLDERID to get a directory
@@ -60,6 +69,7 @@ std::wstring getSystemPathWithFallback(REFKNOWNFOLDERID aKnownFolderID, int aCLS
       IF_FAILED_THROW(pfnGetKnownFolderPath(aKnownFolderID, 0, NULL, &path));
       std::wstring tmpPath = path;
       ::CoTaskMemFree(path);
+      gCachedSystemPaths[aCLSID] = tmpPath;
       return tmpPath;
     }
   }
@@ -73,5 +83,6 @@ std::wstring getSystemPathWithFallback(REFKNOWNFOLDERID aKnownFolderID, int aCLS
                     SHGFP_TYPE_CURRENT, //dwFlags
                     appDataPath //pszPath
                   ));
+  gCachedSystemPaths[aCLSID] = appDataPath;
   return std::wstring(appDataPath);
 }
