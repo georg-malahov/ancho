@@ -12,13 +12,13 @@
 
 CString lastErrorMessage(const DWORD& dwErrorCode)
 {
-	LPTSTR lpErrorText = NULL;
+  LPTSTR lpErrorText = NULL;
 
-	::FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		0, dwErrorCode, 0, lpErrorText, MAX_PATH, 0 );
+  ::FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+      0, dwErrorCode, 0, lpErrorText, MAX_PATH, 0 );
 
   CString msg = lpErrorText;
-	::LocalFree( lpErrorText );
+  ::LocalFree( lpErrorText );
   return msg;
 }
 
