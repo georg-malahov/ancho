@@ -13,10 +13,14 @@
 #include <WinInet.h>
 #include <htiframe.h>
 
-#define ANCHO_SWITCH_BASE 50000
-#define ANCHO_SWITCH_REPORT_DATA ANCHO_SWITCH_BASE+1
-#define ANCHO_SWITCH_REPORT_RESULT ANCHO_SWITCH_BASE+2
-#define ANCHO_SWITCH_REDIRECT ANCHO_SWITCH_BASE+3
+enum {
+  ANCHO_SWITCH_BASE = 50000,
+  ANCHO_SWITCH_REPORT_DATA,
+  ANCHO_SWITCH_REPORT_RESULT,
+  ANCHO_SWITCH_REDIRECT,
+
+  ANCHO_SWITCH_MAX
+};
 
 static CComBSTR
 getMethodNameFromBindInfo(BINDINFO &aInfo)
@@ -409,7 +413,7 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
 //  Continue
 STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
 {
-  if (data->cbData && data->dwState >= ANCHO_SWITCH_BASE) {
+  if (data->dwState >= ANCHO_SWITCH_BASE && data->dwState < ANCHO_SWITCH_MAX) {
     if (data->dwState == ANCHO_SWITCH_REPORT_DATA && m_ProcessedReportData) {
       // We already handled this;
       return S_OK;
@@ -420,6 +424,7 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
     pSink->InternalRelease();
 
     BSTR* params = (BSTR*) data->pData;
+    ATLASSERT(data->cbData);
     ATLASSERT(params);
     CComBSTR bstrUrl = params[0];
     CComBSTR bstrAdditional = params[1];
