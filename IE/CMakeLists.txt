@@ -21,14 +21,18 @@ include_directories(${passthruapp_INC_DIR})
 add_subdirectory(anchocommons)
 include_directories(${anchocommons_INC_DIR})
 
+add_subdirectory(AnchoShared)
+add_dependencies(AnchoShared Magpie)
+
 add_subdirectory(AnchoBgSrv)
-add_dependencies(AnchoBgSrv anchocommons Magpie libbhohelper libprothandlers)# passthruapp)
+add_dependencies(AnchoBgSrv anchocommons Magpie libbhohelper libprothandlers AnchoShared)# passthruapp)
 include_directories(${AnchoBgSrv_INC_DIR})
 
 add_subdirectory(ancho)
-add_dependencies(ancho anchocommons Magpie libbhohelper libprothandlers) #also dependent on AnchoBgSrv - but this will often cause needless rebuild
+add_dependencies(ancho anchocommons Magpie libbhohelper libprothandlers AnchoShared) #also dependent on AnchoBgSrv - but this will often cause needless rebuild
 
 set_target_properties(Magpie PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${${PROJECT_NAME}_BINARY_DIR}/")
+set_target_properties(AnchoShared PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${${PROJECT_NAME}_BINARY_DIR}/")
 set_target_properties(ancho PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${${PROJECT_NAME}_BINARY_DIR}/")
 set_target_properties(AnchoBgSrv PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${${PROJECT_NAME}_BINARY_DIR}/")
 
