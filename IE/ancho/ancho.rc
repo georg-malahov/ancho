@@ -102,13 +102,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "TODO: <Company name>"
-            VALUE "FileDescription", "TODO: <File description>"
+            VALUE "CompanyName", "Salsita Software"
+            VALUE "FileDescription", "Browser Helper Object for Ancho based browser addons."
             VALUE "FileVersion", "1.0.0.1"
-            VALUE "LegalCopyright", "TODO: (c) <Company name>.  All rights reserved."
             VALUE "InternalName", "ancho.dll"
+            VALUE "LegalCopyright", "(c) Salsita Software 2013.  All rights reserved."
             VALUE "OriginalFilename", "ancho.dll"
-            VALUE "ProductName", "TODO: <Product name>"
+            VALUE "ProductName", "Ancho"
             VALUE "ProductVersion", "1.0.0.1"
         END
     END
