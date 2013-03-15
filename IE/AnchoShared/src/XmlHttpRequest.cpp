@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "XmlHttpRequest.h"
+#include "AnchoShared/stdafx.h"
+#include "AnchoShared/XmlHttpRequest.h"
 
 //TODO: Implementation copied from aji - needs cleanup
 class ATL_NO_VTABLE CCustomInternetSecurityImpl :

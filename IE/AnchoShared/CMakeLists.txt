@@ -16,13 +16,17 @@ include_directories(
   )
 
 set(${PROJECT_NAME}_HEADERS
+  "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/dllmain.h"
   "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/stdafx.h"
+  "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/Resource.h"
+  "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/XmlHttpRequest.h"
   )
 
 set(${PROJECT_NAME}_SOURCES 
   "${${PROJECT_NAME}_SRC_DIR}/AnchoShared.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/dllmain.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/stdafx.cpp"
+  "${${PROJECT_NAME}_SRC_DIR}/XmlHttpRequest.cpp"
   )
 # precompiled headers
 foreach( src_file ${${PROJECT_NAME}_SOURCES} )
@@ -140,6 +144,7 @@ add_custom_command(TARGET ${PROJECT_NAME}
 
 # export variables
 set(${PROJECT_NAME}_INC_DIRS ${${PROJECT_NAME}_INC_DIRS} PARENT_SCOPE)
+set(${PROJECT_NAME}_GENERATED_FILES_DIR ${${PROJECT_NAME}_GENERATED_FILES_DIR} PARENT_SCOPE)
 
 set(${PROJECT_NAME}_LIB_DIR "${${PROJECT_NAME}_BINARY_DIR}"  CACHE PATH "Path to ${PROJECT_NAME} lib directory")
 
