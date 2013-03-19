@@ -211,7 +211,8 @@
   };
 
   BrowserActionAPI.prototype.setBadgeText = function() {
-    throw new Error('Unsupported method');
+    // TODO: Implement this
+    // throw new Error('Unsupported method');
   };
 
   BrowserActionAPI.prototype.setPopup = function() {

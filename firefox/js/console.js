@@ -22,6 +22,12 @@
       dump('\n');
     },
 
+    debug: function() {
+      dump('Debug: ');
+      dump(this._toString.apply(this, arguments));
+      dump('\n');
+    },
+
     _toString: function(args) {
       if ('undefined' === typeof(args)) {
         return 'undefined';

@@ -55,6 +55,7 @@
     id: null, // Set by bootstrap.js
     backgroundWindow: null,
     eventDispatcher: new EventDispatcher(),
+    storageConnection: null,
     _unloaders: {},
     _globalIds: {},
     _tabIds: [],

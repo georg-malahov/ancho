@@ -8,13 +8,20 @@
   function BrowserEvents(tabbrowser, extensionState) {
     this.init = function(contentLoadedCallback) {
       function onContentLoaded(event) {
-        var document = tabbrowser.contentDocument;
+        var document = event.target;
+        var win = document.defaultView;
+        var browser = tabbrowser.mCurrentBrowser;
         // TODO: Implement for subframes
-        var isFrame = (event.target instanceof Ci.nsIDOMHTMLDocument &&
-          event.target != document);
+        var isFrame = ((document instanceof Ci.nsIDOMHTMLDocument) && win.frameElement);
         // We don't want to trigger the content scripts for about:blank.
         var hasContent = ('about:' !== document.location.protocol);
         if (hasContent && !isFrame) {
+          if (browser._anchoCurrentLocation != document.location.href) {
+            browser._anchoCurrentLocation = document.location.href;
+            var tabId = Utils.getWindowId(browser.contentWindow);
+            extensionState.eventDispatcher.notifyListeners('tab.updated', null,
+              [ tabId, { url: document.location.href }, { id: tabId } ]);
+          }
           if (contentLoadedCallback) {
             contentLoadedCallback(tabbrowser.contentWindow, document.location.href);
           }
@@ -29,13 +36,16 @@
       }
 
       function onTabOpen(event) {
+        let browser = tabbrowser.getBrowserForTab(event.target);
+        browser._anchoCurrentLocation = browser.contentDocument.location.href;
         extensionState.eventDispatcher.notifyListeners('tab.created', null,
-          [ { id: Utils.getWindowId(tabbrowser.getBrowserForTab(event.target).contentWindow) } ]);
+          [ { id: Utils.getWindowId(browser.contentWindow) } ]);
       }
 
       function onTabClose(event) {
+        let browser = tabbrowser.getBrowserForTab(event.target);
         extensionState.eventDispatcher.notifyListeners('tab.removed', null,
-          [ Utils.getWindowId(tabbrowser.getBrowserForTab(event.target).contentWindow), {} ]);
+          [ Utils.getWindowId(browser.contentWindow), {} ]);
       }
 
       function onTabSelect(event) {
@@ -53,8 +63,10 @@
       // Trigger the content loaded callback on any tabs that are already open.
       if (contentLoadedCallback) {
         for (var i=0; i<tabbrowser.browsers.length; i++) {
-          var browser = tabbrowser.browsers[i];
-          contentLoadedCallback(browser.contentWindow, browser.contentDocument.location.href);
+          let browser = tabbrowser.browsers[i];
+          let location = browser.contentDocument.location.href;
+          browser._anchoCurrentLocation = location;
+          contentLoadedCallback(browser.contentWindow, location);
         }
       }
 

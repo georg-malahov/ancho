@@ -9,7 +9,10 @@
 
   var StorageAPI = function(extensionState, contentWindow, storageSpace) {
     var dbFile = FileUtils.getFile('ProfD', ['ancho_storage.sqlite3']);
-    this._connection = Services.storage.openDatabase(dbFile); // create the file if it does not exist
+    if (!extensionState.storageConnection) {
+      extensionState.storageConnection = Services.storage.openDatabase(dbFile); // create the file if it does not exist
+    }
+    this._connection = extensionState.storageConnection;
     this._tableName = extensionState.id.replace(/[^A-Za-z]/g, '_') + '_' + storageSpace; // no sanitization necessary
     this._connection.executeSimpleSQL('CREATE TABLE IF NOT EXISTS '+this._tableName+' ( key TEXT PRIMARY KEY, value TEXT )');
     // A separate CREATE INDEX command for keys not needed:

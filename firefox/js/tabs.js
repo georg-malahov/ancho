@@ -24,6 +24,7 @@
     this.onCreated = new Event(window, this._tab, this._state, 'tab.created');
     this.onActivated = new Event(window, this._tab, this._state, 'tab.activated');
     this.onRemoved = new Event(window, this._tab, this._state, 'tab.removed');
+    this.onUpdated = new Event(window, this._tab, this._state, 'tab.updated');
   }
 
   TabsAPI.prototype = {

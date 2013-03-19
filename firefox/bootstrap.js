@@ -174,6 +174,12 @@ function unloadBackgroundScripts() {
   require('./js/config').contentScripts = [];
 }
 
+function closeStorageConnection() {
+  if (extensionState.storageConnection) {
+    extensionState.storageConnection.asyncClose();
+  }
+}
+
 // When the extension is activated:
 //
 function startup(data, reason) {
@@ -192,6 +198,7 @@ function startup(data, reason) {
 function shutdown(data, reason) {
   dump('\nAncho: shutting down ...\n\n');
 
+  closeStorageConnection();
   unregisterProtocolHandler();
   releaseBackground();
   unloadBackgroundScripts();

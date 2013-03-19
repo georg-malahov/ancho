@@ -84,8 +84,7 @@
     _mapToFileURI: function(aURI) {
       var path = "." + aURI.path;
       let baseURI = extensionURIs[aURI.host];
-      let foo = NetUtil.newURI(path, null, baseURI);
-      return foo;
+      return NetUtil.newURI(path, null, baseURI);
     },
 
     newChannel: function(aURI) {
