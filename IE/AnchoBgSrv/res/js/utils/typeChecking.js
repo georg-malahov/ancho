@@ -358,7 +358,7 @@ var ObjectValidator = function(aSpec, aNamespace) {
       return createValidationReportError(e, validationError.NOT_AN_OBJECT);
     }
 
-    properties = specification.properties;
+    properties = (specification && specification.properties) || null;
     if (!properties) {
       return validationReport;
     }

@@ -13,10 +13,14 @@
 #include <WinInet.h>
 #include <htiframe.h>
 
-#define ANCHO_SWITCH_BASE 50000
-#define ANCHO_SWITCH_REPORT_DATA ANCHO_SWITCH_BASE+1
-#define ANCHO_SWITCH_REPORT_RESULT ANCHO_SWITCH_BASE+2
-#define ANCHO_SWITCH_REDIRECT ANCHO_SWITCH_BASE+3
+enum {
+  ANCHO_SWITCH_BASE = 50000,
+  ANCHO_SWITCH_REPORT_DATA,
+  ANCHO_SWITCH_REPORT_RESULT,
+  ANCHO_SWITCH_REDIRECT,
+
+  ANCHO_SWITCH_MAX
+};
 
 static CComBSTR
 getMethodNameFromBindInfo(BINDINFO &aInfo)
@@ -362,8 +366,18 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
 {
   CComBSTR rawUri;
   IF_FAILED_RET(pUri->GetRawUri(&rawUri));
-
   CComPtr<CAnchoProtocolSink> pSink = GetSink();
+
+  CComBSTR method;
+  BINDINFO bindInfo = {0};
+  bindInfo.cbSize = sizeof(BINDINFO);
+  DWORD grfBINDF = 0;
+  //When I move GetBindInfo() after __super::StartEx it crashes
+  if (SUCCEEDED(pOIBindInfo->GetBindInfo(&grfBINDF, &bindInfo))) {
+    method = getMethodNameFromBindInfo(bindInfo);
+  } else {
+    method = L"GET";
+  }
 
   IF_FAILED_RET(__super::StartEx(pUri, pOIProtSink, pOIBindInfo, grfPI, dwReserved));
 
@@ -378,16 +392,6 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
     IF_FAILED_RET(getEventsFromSink(pSink, rawUri, m_BrowserEvents));
   }
   if (m_BrowserEvents) {
-    CComBSTR method;
-    BINDINFO bindInfo = {0};
-    bindInfo.cbSize = sizeof(BINDINFO);
-    DWORD grfBINDF;
-    if (SUCCEEDED(pOIBindInfo->GetBindInfo(&grfBINDF, &bindInfo))) {
-      method = getMethodNameFromBindInfo(bindInfo);
-    } else {
-      method = L"GET";
-    }
-
     WebRequestReporterComObject * pNewObject = NULL;
     if (SUCCEEDED(WebRequestReporterComObject::CreateInstance(&pNewObject))) {
       CComPtr<IWebRequestReporter> reporter(pNewObject);
@@ -409,10 +413,10 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
 //  Continue
 STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
 {
-  if (data->dwState >= ANCHO_SWITCH_BASE) {
+  if (data->dwState >= ANCHO_SWITCH_BASE && data->dwState < ANCHO_SWITCH_MAX) {
     if (data->dwState == ANCHO_SWITCH_REPORT_DATA && m_ProcessedReportData) {
-       // We already handled this;
-       return S_OK;
+      // We already handled this;
+      return S_OK;
     }
 
     CComPtr<CAnchoProtocolSink> pSink = GetSink();
@@ -420,6 +424,7 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
     pSink->InternalRelease();
 
     BSTR* params = (BSTR*) data->pData;
+    ATLASSERT(data->cbData);
     ATLASSERT(params);
     CComBSTR bstrUrl = params[0];
     CComBSTR bstrAdditional = params[1];

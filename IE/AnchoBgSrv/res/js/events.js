@@ -40,7 +40,7 @@
     }
 
     this.fire = function() {
-      console.debug('Firing event ' + self._eventName + ' - ' + self._listeners.length + ' listeners; instance:' + self._instanceID);
+      //console.debug('Firing event ' + self._eventName + ' - ' + self._listeners.length + ' listeners; instance:' + self._instanceID);
       var results = [];
       for (var i = 0; i < self._listeners.length; ++i) {
         try {

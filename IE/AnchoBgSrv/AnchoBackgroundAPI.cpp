@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <fstream>
 
+
 /*============================================================================
  * class CAnchoBackgroundAPI
  */
@@ -490,6 +491,83 @@ STDMETHODIMP CAnchoBackgroundAPI::invokeEvent(BSTR aEventName, INT aSelectedInst
     std::for_each(it->second.begin(), it->second.end(), InvokeSelectedEventFunctor(aArgs, aResults, aSelectedInstance));
   }
   return S_OK;
+}
+
+StorageDatabase & CAnchoBackgroundAPI::getStorageInstance(const std::wstring &aStorageType)
+{
+  if (aStorageType != L"local") {
+    ANCHO_THROW(std::runtime_error("Unsupported storage type"));
+  }
+
+  if (!mStorageLocalDb.isOpened()) {
+    std::wstring path = getSystemPathWithFallback(FOLDERID_LocalAppDataLow, CSIDL_LOCAL_APPDATA);
+    path += L"Salsita";
+
+    if (!PathIsDirectory(path.c_str())) {
+      ATLTRACE(L"Creating directory: %s\n", path.c_str());
+      int rv = SHCreateDirectory(0, path.c_str());
+      if (rv != ERROR_SUCCESS) {
+        ATLTRACE(L"Failed to create directory: %s\n", path.c_str());
+        ANCHO_THROW(std::runtime_error("Failed to create directory."));
+      }
+    }
+    path += L"\\StorageLocal.sqlite";
+    //TODO - escape table name
+    std::wstring tableName = std::wstring(L"Ancho_") + m_bsID.m_str;
+    mStorageLocalDb.open(path, tableName);
+  }
+
+  return mStorageLocalDb;
+}
+
+STDMETHODIMP CAnchoBackgroundAPI::storageGet(BSTR aStorageType, BSTR aKey, VARIANT* aValue)
+{
+  BEGIN_TRY_BLOCK;
+
+  ENSURE_RETVAL(aValue);
+
+  std::wstring value;
+  try {
+    getStorageInstance(aStorageType).getItem(std::wstring(aKey), value);
+  } catch (StorageDatabase::EItemNotFound &) {
+    aValue->vt = VT_UNKNOWN;
+    return S_OK;
+  }
+
+  CComVariant retValue(value.c_str());
+  return retValue.Detach(aValue);
+
+  END_TRY_BLOCK_CATCH_TO_HRESULT;
+}
+
+STDMETHODIMP CAnchoBackgroundAPI::storageSet(BSTR aStorageType, BSTR aKey, BSTR aValue)
+{
+  BEGIN_TRY_BLOCK;
+
+  getStorageInstance(aStorageType).setItem(std::wstring(aKey), std::wstring(aValue));
+  return S_OK;
+
+  END_TRY_BLOCK_CATCH_TO_HRESULT;
+}
+
+STDMETHODIMP CAnchoBackgroundAPI::storageRemove(BSTR aStorageType, BSTR aKey)
+{
+  BEGIN_TRY_BLOCK;
+
+  getStorageInstance(aStorageType).removeItem(std::wstring(aKey));
+  return S_OK;
+
+  END_TRY_BLOCK_CATCH_TO_HRESULT;
+}
+
+STDMETHODIMP CAnchoBackgroundAPI::storageClear(BSTR aStorageType)
+{
+  BEGIN_TRY_BLOCK;
+
+  getStorageInstance(aStorageType).clear();
+  return S_OK;
+
+  END_TRY_BLOCK_CATCH_TO_HRESULT;
 }
 
 //----------------------------------------------------------------------------

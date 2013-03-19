@@ -38,8 +38,10 @@ set(${PROJECT_NAME}_HEADERS
   "${${PROJECT_NAME}_INC_DIR}/PopupWindow.h"
   "${${PROJECT_NAME}_INC_DIR}/resource.h"
   "${${PROJECT_NAME}_INC_DIR}/stdafx.h"
+  "${${PROJECT_NAME}_INC_DIR}/StorageDatabase.h"
   "${${PROJECT_NAME}_INC_DIR}/targetver.h"
   "${${PROJECT_NAME}_INC_DIR}/XmlHttpRequest.h"
+  "${${PROJECT_NAME}_INC_DIR}/sqlite3.h"
   )
 
 set(${PROJECT_NAME}_SOURCES 
@@ -57,8 +59,13 @@ set(${PROJECT_NAME}_SOURCES
   "${${PROJECT_NAME}_SRC_DIR}/LogWindow.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/PopupWindow.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/stdafx.cpp"
+  "${${PROJECT_NAME}_SRC_DIR}/StorageDatabase.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/XmlHttpRequest.cpp"
   )
+set(${PROJECT_NAME}_C_SOURCES 
+  "${${PROJECT_NAME}_SRC_DIR}/sqlite3.c"
+  )
+
 # precompiled headers
 foreach( src_file ${${PROJECT_NAME}_SOURCES} )
         set_source_files_properties(
@@ -146,6 +153,7 @@ source_group("Resources" FILES ${${PROJECT_NAME}_RC_FILES})
 add_executable(${PROJECT_NAME} WIN32 
   ${${PROJECT_NAME}_HEADERS} 
   ${${PROJECT_NAME}_SOURCES}
+  ${${PROJECT_NAME}_C_SOURCES}
   ${${PROJECT_NAME}_GENERATED_FILES}
   ${${PROJECT_NAME}_RC_FILES}
   ${${PROJECT_NAME}_IDL_FILE}
