@@ -18,6 +18,8 @@
     backgroundPage: null,
     // Patterns for resources that can be accessed from content pages.
     webAccessibleResources: [],
+    // Locale to use if browser is not configured otherwise.
+    defaultLocale: 'en',
     // Init function for calculated values.
     _init: function() {
       // A URL prefix to hosted browser extesnion code.

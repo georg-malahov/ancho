@@ -133,6 +133,9 @@ function loadConfig(addon, firstRun) {
         }
       }
     } // background
+    if (config.default_locale) {
+      Config.defaultLocale = config.default_locale;
+    }
     if (config.browser_action) {
       Config.browser_action = {
         default_icon : config.browser_action.default_icon,
@@ -159,7 +162,7 @@ function registerProtocolHandler(addon) {
   );
 
   // TODO: Make this generic so we can handle multiple Ancho addons.
-  protocolHandler.registerExtensionURI('ancho', addon.getResourceURI('chrome-ext').spec);
+  protocolHandler.registerExtensionURI('ancho', addon.getResourceURI('chrome-ext'));
 }
 
 function unregisterProtocolHandler() {

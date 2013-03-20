@@ -10,6 +10,7 @@
   var HistoryAPI = require('./history');
   var DebuggerAPI = require('./debugger');
   var StorageAPI = require('./storage');
+  var I18nAPI = require('./i18n');
 
   // Ancho APIs
   var ToolbarAPI = require('./toolbar');
@@ -45,6 +46,7 @@
       browserAction: new BrowserActionAPI(extensionState, contentWindow),
       cookies: new CookiesAPI(extensionState, contentWindow),
       history: new HistoryAPI(extensionState, contentWindow),
+      i18n: new I18nAPI(extensionState, contentWindow),
       debugger: new DebuggerAPI(extensionState, contentWindow),
       storage: {
         // FIXME TODO: conflicting prefix when more Ancho extensions are installed

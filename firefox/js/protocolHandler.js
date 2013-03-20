@@ -14,13 +14,17 @@
 
   var extensionURIs = {};
 
-  exports.registerExtensionURI = function(id, URISpec) {
-    extensionURIs[id] = NetUtil.newURI(URISpec, null, null);
+  exports.registerExtensionURI = function(id, uri) {
+    extensionURIs[id] = uri;
   };
 
   exports.unregisterExtensionURI = function(id) {
     delete extensionURIs[id];
   };
+
+  exports.getExtensionURI = function(id) {
+    return extensionURIs[id];
+  }
 
   function getLoadContext(aRequest) {
     try {
