@@ -208,3 +208,22 @@ STDMETHODIMP CAnchoXmlHttpRequest::addCustomInternetSecurity(CComPtr<IAnchoXmlHt
 
   return S_OK;
 }
+#include "AnchoShared/AnchoShared.h"
+
+HRESULT ANCHOSHARED_API createAnchoXHRInstance(IAnchoXmlHttpRequest** ppRet)
+{
+  if (!ppRet)
+  {
+    return E_POINTER;
+  }
+  (*ppRet) = NULL;
+  CComObject<CAnchoXmlHttpRequest> * pNewXHR = NULL;
+  HRESULT hr = CComObject<CAnchoXmlHttpRequest>::CreateInstance(&pNewXHR);
+  if (FAILED(hr))
+  {
+    return hr;
+  }
+  pNewXHR->AddRef();
+  (*ppRet) = pNewXHR;
+  return S_OK;
+}

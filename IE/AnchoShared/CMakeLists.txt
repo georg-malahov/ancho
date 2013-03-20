@@ -16,6 +16,7 @@ include_directories(
   )
 
 set(${PROJECT_NAME}_HEADERS
+  "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/AnchoShared.h"
   "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/dllmain.h"
   "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/stdafx.h"
   "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/Resource.h"

@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "PopupWindow.h"
 #include "AnchoBgSrv_i.h"
+#include "AnchoShared_i.h"
+#include "AnchoShared/AnchoShared.h"
 
 class CPopupResizeEventHandler;
 typedef CComObject<CPopupResizeEventHandler> CPopupResizeEventHandlerComObject;
@@ -108,8 +110,8 @@ LRESULT CPopupWindow::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
   }
 
   //Replacing XMLHttpRequest by wrapper
-  CComPtr<IDispatchEx> pRequest;
-  IF_FAILED_RET(pRequest.CoCreateInstance(__uuidof(AnchoXmlHttpRequest)));
+  CComPtr<IAnchoXmlHttpRequest> pRequest;
+  IF_FAILED_RET(createAnchoXHRInstance(&pRequest));
 
   CIDispatchHelper window;
   script.Get<CIDispatchHelper, VT_DISPATCH, IDispatch*>(L"window", window);

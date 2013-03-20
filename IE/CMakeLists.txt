@@ -22,7 +22,9 @@ add_subdirectory(anchocommons)
 include_directories(${anchocommons_INC_DIR})
 
 add_subdirectory(AnchoShared)
-add_dependencies(AnchoShared Magpie)
+add_dependencies(AnchoShared Magpie anchocommons)
+include_directories(${AnchoShared_INC_DIR})
+include_directories(${AnchoShared_GENERATED_FILES_DIR})
 
 add_subdirectory(AnchoBgSrv)
 add_dependencies(AnchoBgSrv anchocommons Magpie libbhohelper libprothandlers AnchoShared)# passthruapp)

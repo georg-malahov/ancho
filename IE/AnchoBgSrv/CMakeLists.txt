@@ -40,7 +40,6 @@ set(${PROJECT_NAME}_HEADERS
   "${${PROJECT_NAME}_INC_DIR}/stdafx.h"
   "${${PROJECT_NAME}_INC_DIR}/StorageDatabase.h"
   "${${PROJECT_NAME}_INC_DIR}/targetver.h"
-  "${${PROJECT_NAME}_INC_DIR}/XmlHttpRequest.h"
   "${${PROJECT_NAME}_INC_DIR}/sqlite3.h"
   )
 
@@ -60,7 +59,6 @@ set(${PROJECT_NAME}_SOURCES
   "${${PROJECT_NAME}_SRC_DIR}/PopupWindow.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/stdafx.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/StorageDatabase.cpp"
-  "${${PROJECT_NAME}_SRC_DIR}/XmlHttpRequest.cpp"
   )
 set(${PROJECT_NAME}_C_SOURCES 
   "${${PROJECT_NAME}_SRC_DIR}/sqlite3.c"
@@ -158,7 +156,7 @@ add_executable(${PROJECT_NAME} WIN32
   ${${PROJECT_NAME}_RC_FILES}
   ${${PROJECT_NAME}_IDL_FILE}
   )
-target_link_libraries(${PROJECT_NAME} libbhohelper anchocommons libprothandlers Wininet)
+target_link_libraries(${PROJECT_NAME} libbhohelper anchocommons libprothandlers Wininet AnchoShared)
 
 
 
