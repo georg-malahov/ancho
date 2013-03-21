@@ -1,5 +1,5 @@
 #pragma once
-#include "AnchoBgSrv_i.h"
+#include "AnchoShared_i.h"
 #include <MsXml.h>
 #include <string>
 
@@ -10,11 +10,11 @@ class ATL_NO_VTABLE CAnchoXmlHttpRequest :
   public CComObjectRootEx<CComSingleThreadModel>,
   public CComCoClass<CAnchoXmlHttpRequest, &CLSID_AnchoXmlHttpRequest>,
   public IObjectWithSite,
-  public IDispatchImpl<IAnchoXmlHttpRequest, &IID_IAnchoXmlHttpRequest, &LIBID_AnchoBgSrvLib, 0xffff, 0xffff>,
+  public IDispatchImpl<IAnchoXmlHttpRequest, &IID_IAnchoXmlHttpRequest, &LIBID_AnchoSharedLib, 0xffff, 0xffff>,
   public IDispatchEx
 {
 public:
-  typedef IDispatchImpl<IAnchoXmlHttpRequest, &IID_IAnchoXmlHttpRequest, &LIBID_AnchoBgSrvLib, 0xffff, 0xffff> IDispatchImplPredecessor;
+  typedef IDispatchImpl<IAnchoXmlHttpRequest, &IID_IAnchoXmlHttpRequest, &LIBID_AnchoSharedLib, 0xffff, 0xffff> IDispatchImplPredecessor;
 
   static const DISPID DISPID_PROTOTYPE = 8000;
   // -------------------------------------------------------------------------

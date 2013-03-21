@@ -1,5 +1,7 @@
 #include "StdAfx.h"
 #include "BackgroundWindow.h"
+#include "AnchoShared_i.h"
+#include "AnchoShared/AnchoShared.h"
 
 HRESULT CBackgroundWindow::FinalConstruct()
 {
@@ -38,8 +40,8 @@ LRESULT CBackgroundWindow::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
     script.SetProperty((LPOLESTR)(it->first.c_str()), CComVariant(it->second));
   }
   //Replacing XMLHttpRequest by wrapper
-  CComPtr<IDispatchEx> pRequest;
-  IF_FAILED_RET(pRequest.CoCreateInstance(__uuidof(AnchoXmlHttpRequest)));
+  CComPtr<IAnchoXmlHttpRequest> pRequest;
+  IF_FAILED_RET(createAnchoXHRInstance(&pRequest));
   IF_FAILED_RET(script.SetProperty((LPOLESTR)L"XMLHttpRequest", CComVariant(pRequest.p)));
 
   CIDispatchHelper window;

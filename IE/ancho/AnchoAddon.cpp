@@ -8,6 +8,8 @@
 #include "AnchoAddon.h"
 #include "dllmain.h"
 #include "ProtocolHandlerRegistrar.h"
+#include "AnchoShared_i.h"
+#include "AnchoShared/AnchoShared.h"
 
 /*============================================================================
  * class CAnchoAddon
@@ -205,8 +207,9 @@ STDMETHODIMP CAnchoAddon::InitializeContentScripting(IWebBrowser2* pBrowser, BST
   m_Magpie->AddNamedItem(L"window", m_wrappedWindow, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_GLOBALMEMBERS);
 
   CIDispatchHelper window = m_wrappedWindow;
-  CComPtr<IDispatchEx> pRequest;
-  IF_FAILED_RET(pRequest.CoCreateInstance(__uuidof(AnchoXmlHttpRequest)));
+  CComPtr<IAnchoXmlHttpRequest> pRequest;
+  IF_FAILED_RET(createAnchoXHRInstance(&pRequest));
+  //IF_FAILED_RET(pRequest.CoCreateInstance(__uuidof(AnchoXmlHttpRequest)));
 
   IF_FAILED_RET(window.SetProperty((LPOLESTR)L"XMLHttpRequest", CComVariant(pRequest.p)));
   m_Magpie->AddNamedItem(L"XMLHttpRequest", pRequest, SCRIPTITEM_ISVISIBLE|SCRIPTITEM_CODEONLY);
