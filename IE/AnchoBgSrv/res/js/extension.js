@@ -227,6 +227,8 @@ var Extension = function(instanceID) {
     if (args.responseCallback) {
       var callbackWrapper = new CallbackWrapper(args.responseCallback);
       callback = callbackWrapper.callback;
+    } else {
+      callback = function() { /*dummy*/ }
     }
     if (args.extensionId && args.extensionId != addonAPI.id) {
       ret = serviceAPI.invokeExternalEventObject(
