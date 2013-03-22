@@ -17,16 +17,17 @@
     let rootURI = protocolHandler.getExtensionURI('ancho');
     let localeDir = rootURI.QueryInterface(Ci.nsIFileURL).file;
     localeDir.append('_locales');
-
-    let entries = localeDir.directoryEntries;
-    while (entries.hasMoreElements()) {
-      let entry = entries.getNext().QueryInterface(Ci.nsIFile);
-      let locale = entry.leafName;
-      entry.append('messages.json');
-      if (entry.exists()) {
-        let entryURI = Services.io.newFileURI(entry);
-        let json = utils.readStringFromUrl(entryURI);
-        messages[locale] = JSON.parse(json);
+    if (localeDir.exists()) {
+      let entries = localeDir.directoryEntries;
+      while (entries.hasMoreElements()) {
+        let entry = entries.getNext().QueryInterface(Ci.nsIFile);
+        let locale = entry.leafName;
+        entry.append('messages.json');
+        if (entry.exists()) {
+          let entryURI = Services.io.newFileURI(entry);
+          let json = utils.readStringFromUrl(entryURI);
+          messages[locale] = JSON.parse(json);
+        }
       }
     }
   }
