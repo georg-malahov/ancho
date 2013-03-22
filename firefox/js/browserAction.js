@@ -118,10 +118,10 @@
 
         function resizePopup() {
           if (body.scrollHeight !== oldHeight && body.scrollWidth !== oldWidth) {
-            oldHeight = iframe.height = (body.scrollHeight + 1);
-            panel.height = oldHeight + getPanelBorderWidth('Top') + getPanelBorderWidth('Bottom');
-            oldWidth = iframe.width = (body.scrollWidth + 1);
-            panel.width = oldWidth + getPanelBorderWidth('Left') + getPanelBorderWidth('Right');
+            oldHeight = iframe.height = body.scrollHeight;
+            oldWidth = iframe.width = body.scrollWidth;
+            panel.sizeTo(oldWidth + getPanelBorderWidth('Left') + getPanelBorderWidth('Right') + 1,
+              oldHeight + getPanelBorderWidth('Top') + getPanelBorderWidth('Bottom') + 1);
           }
         }
 
