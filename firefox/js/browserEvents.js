@@ -5,8 +5,25 @@
 
   var Utils = require('./utils');
 
+var prepareWindow = require('./scripting').prepareWindow;
+
+  var progressListener = {
+      // nsIWebProgressListener
+      onLocationChange: function(aProgress, aRequest, aURI) {
+        if (aURI.spec.indexOf('chrome-extension') === 0) {
+          prepareWindow(aProgress.DOMWindow.wrappedJSObject);
+        }
+      },
+
+      onStateChange: function() {},
+      onProgressChange: function() {},
+      onStatusChange: function() {},
+      onSecurityChange: function() {}
+  };
+
   function BrowserEvents(tabbrowser, extensionState) {
     this.init = function(contentLoadedCallback) {
+      tabbrowser.addProgressListener(progressListener);
       function onContentLoaded(event) {
         var document = event.target;
         var win = document.defaultView;
@@ -29,6 +46,7 @@
       }
 
       function unload() {
+        tabbrowser.removeProgressListener(progressListener);
         tabbrowser.removeEventListener('DOMContentLoaded', onContentLoaded, false);
         container.removeEventListener('TabOpen', onTabOpen, false);
         container.removeEventListener('TabClose', onTabClose, false);

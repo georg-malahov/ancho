@@ -97,6 +97,15 @@
     }
   };
 
+  exports.getChromeWindow = function(win) {
+    return win.QueryInterface(Ci.nsIInterfaceRequestor)
+      .getInterface(Ci.nsIWebNavigation)
+      .QueryInterface(Ci.nsIDocShellTreeItem)
+      .rootTreeItem
+      .QueryInterface(Ci.nsIInterfaceRequestor)
+      .getInterface(Ci.nsIDOMWindow);
+  };
+
   // To consider:
   // Instead of adding error descriptions one by one as we see them,
   // take them all from https://developer.mozilla.org/en/docs/Table_Of_Errors

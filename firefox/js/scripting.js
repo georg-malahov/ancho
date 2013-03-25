@@ -13,7 +13,7 @@
   var contentScripts = require('./config').contentScripts;
   var Config = require('./config');
 
-  function prepareWindow(window) {
+  exports.prepareWindow = function(window) {
     if (!('chrome' in window)) {
       var api = new API(window, ExtensionState);
       window.chrome = api.chrome;
@@ -82,7 +82,7 @@
         return;
       }
       document.removeEventListener('DOMWindowCreated', arguments.callee, false);
-      prepareWindow(targetWindow.wrappedJSObject);
+      exports.prepareWindow(targetWindow.wrappedJSObject);
     }, false);
 
     if (callback) {

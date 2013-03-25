@@ -4,6 +4,7 @@
 
   Components.utils.import("resource://gre/modules/NetUtil.jsm");
   Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+  Components.utils.import("resource://gre/modules/Services.jsm");
 
   var config = require('./config');
   var ChannelWrapper = require('./channelWrapper');
@@ -77,7 +78,7 @@
     scheme: SCHEME,
     defaultPort: -1,
     protocolFlags: Ci.nsIProtocolHandler.URI_LOADABLE_BY_ANYONE |
-                   Ci.nsIProtocolHandler.URI_INHERITS_SECURITY_CONTEXT,
+      Ci.nsIProtocolHandler.URI_IS_LOCAL_RESOURCE,
 
     newURI: function(aSpec, aOriginCharset, aBaseURI) {
       let uri = Cc["@mozilla.org/network/standard-url;1"].createInstance(Ci.nsIStandardURL);
@@ -94,6 +95,10 @@
     newChannel: function(aURI) {
       let channel = NetUtil.newChannel(this._mapToFileURI(aURI), null, null);
       channel.originalURI = aURI;
+
+      // Use the system principal for the channel.
+      channel.owner = Services.scriptSecurityManager.getSystemPrincipal();
+
       let wrapper = new ChannelWrapper(channel);
       // Monkey patch in our custom onStartRequest method.
       // This function rejects requests from content pages for resources that

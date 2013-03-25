@@ -105,6 +105,7 @@
             event.preventDefault();
             var browser = document.getElementById("content");
             browser.contentWindow.open(link.href, link.target);
+            panel.hidePopup();
             return false;
           }
         }, false);
