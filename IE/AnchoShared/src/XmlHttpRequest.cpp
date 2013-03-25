@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "XmlHttpRequest.h"
+#include "AnchoShared/stdafx.h"
+#include "AnchoShared/XmlHttpRequest.h"
 
 //TODO: Implementation copied from aji - needs cleanup
 class ATL_NO_VTABLE CCustomInternetSecurityImpl :
@@ -206,5 +206,24 @@ STDMETHODIMP CAnchoXmlHttpRequest::addCustomInternetSecurity(CComPtr<IAnchoXmlHt
   IF_FAILED_RET(pRequest->QueryInterface(&pObjWithSite));
   IF_FAILED_RET(pObjWithSite->SetSite(pUnkSecurity));
 
+  return S_OK;
+}
+#include "AnchoShared/AnchoShared.h"
+
+HRESULT ANCHOSHARED_API createAnchoXHRInstance(IAnchoXmlHttpRequest** ppRet)
+{
+  if (!ppRet)
+  {
+    return E_POINTER;
+  }
+  (*ppRet) = NULL;
+  CComObject<CAnchoXmlHttpRequest> * pNewXHR = NULL;
+  HRESULT hr = CComObject<CAnchoXmlHttpRequest>::CreateInstance(&pNewXHR);
+  if (FAILED(hr))
+  {
+    return hr;
+  }
+  pNewXHR->AddRef();
+  (*ppRet) = pNewXHR;
   return S_OK;
 }
