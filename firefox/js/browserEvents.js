@@ -5,7 +5,7 @@
 
   var Utils = require('./utils');
 
-var prepareWindow = require('./scripting').prepareWindow;
+  var prepareWindow = require('./scripting').prepareWindow;
 
   var progressListener = {
       // nsIWebProgressListener

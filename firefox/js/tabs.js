@@ -66,7 +66,10 @@
       }
 
       function createTabFromBrowser(browser) {
-        return { id: Utils.getWindowId(browser.contentWindow) }
+        return {
+          id: Utils.getWindowId(browser.contentWindow),
+          url: browser.contentDocument.location.href
+        }
       }
 
       for (let i=0; i<windows.length; i++) {

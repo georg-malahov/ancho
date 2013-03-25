@@ -69,15 +69,6 @@ function setResourceSubstitution(addon) {
   resourceProtocol.setSubstitution('ancho', addon.getResourceURI('/'));
 }
 
-function matchPatternToRegexp(matchPattern) {
-  // TODO: Implement this according to the spec.
-  // Each section (scheme, host, etc.) should be compared individually.
-  return matchPattern
-    .replace('<all_urls>', '*')
-    .replace(/\./g, '\\.')
-    .replace(/\*/g, '.*')
-}
-
 function loadConfig(addon, firstRun) {
   // Load the manifest
   Cu.import('resource://ancho/modules/Require.jsm');
@@ -92,6 +83,7 @@ function loadConfig(addon, firstRun) {
   Config.firstRun = firstRun;
 
   var readStringFromUrl = require('./js/utils').readStringFromUrl;
+  var matchPatternToRegexp = require('./js/utils').matchPatternToRegexp;
 
   if (addon.hasResource('chrome-ext/manifest.json')) {
     var manifestUrl = addon.getResourceURI('chrome-ext/manifest.json');
