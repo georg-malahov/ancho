@@ -58,7 +58,6 @@
     storageConnection: null,
     _unloaders: {},
     _globalIds: {},
-    _tabIds: [],
 
     registerUnloader: function(win, unloader) {
       var windowId = getWindowId(win);
@@ -100,16 +99,7 @@
     startSingletonAPIs: function(window) {
       this.backgroundWindow = window;
       new WebRequestSingleton(this, window);
-    },
-
-    registerTab: function(tabId) {
-      this._tabIds.push(tabId);
-    },
-
-    tabIds: function() {
-      return this._tabIds.slice(0);
     }
-
   };
 
   module.exports = ExtensionState;

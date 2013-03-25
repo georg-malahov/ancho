@@ -37,23 +37,22 @@
 
   // export
   function API(contentWindow, extensionState) {
-
-    this.chrome = {
-      extension: new ExtensionAPI(extensionState, contentWindow),
-      tabs: new TabsAPI(extensionState, contentWindow),
-      windows: new WindowsAPI(extensionState, contentWindow),
-      webRequest: new WebRequestAPI(extensionState, contentWindow),
-      browserAction: new BrowserActionAPI(extensionState, contentWindow),
-      cookies: new CookiesAPI(extensionState, contentWindow),
-      history: new HistoryAPI(extensionState, contentWindow),
-      i18n: new I18nAPI(extensionState, contentWindow),
-      debugger: new DebuggerAPI(extensionState, contentWindow),
-      storage: {
-        // FIXME TODO: conflicting prefix when more Ancho extensions are installed
-        local: new StorageAPI(extensionState, contentWindow, 'local'),
-        sync: new StorageAPI(extensionState, contentWindow, 'sync')
-      }
+    let chrome = {};
+    chrome.extension = new ExtensionAPI(extensionState, contentWindow);
+    chrome.tabs = new TabsAPI(extensionState, contentWindow, chrome);
+    chrome.windows = new WindowsAPI(extensionState, contentWindow);
+    chrome.webRequest = new WebRequestAPI(extensionState, contentWindow);
+    chrome.browserAction = new BrowserActionAPI(extensionState, contentWindow);
+    chrome.cookies = new CookiesAPI(extensionState, contentWindow);
+    chrome.history = new HistoryAPI(extensionState, contentWindow);
+    chrome.i18n = new I18nAPI(extensionState, contentWindow);
+    chrome.debugger = new DebuggerAPI(extensionState, contentWindow);
+    chrome.storage = {
+      // FIXME TODO: conflicting prefix when more Ancho extensions are installed
+      local: new StorageAPI(extensionState, contentWindow, 'local'),
+      sync: new StorageAPI(extensionState, contentWindow, 'sync')
     };
+    this.chrome = chrome;
     exposeProperties(this.chrome);
 
     this.ancho = {
