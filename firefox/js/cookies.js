@@ -12,6 +12,7 @@
   var COOKIE_CHANGED = 'cookie-changed';
   var COOKIE_CHANGED_DATA_ADDED = 'added';
   var COOKIE_CHANGED_DATA_CHANGED = 'changed';
+  var COOKIE_CHANGED_DATA_DELETED = 'deleted';
 
   var CookiesAPI = function(state, window) {
     this._state = state;
@@ -22,16 +23,17 @@
 
   CookiesAPI.prototype.observe = function(subject, topic, data) {
     try {
-      if (topic == COOKIE_CHANGED) {
-        var changed = data == COOKIE_CHANGED_DATA_CHANGED
-            || data == COOKIE_CHANGED_DATA_ADDED;
-        // TODO: handle other events not only added/changed
+      if (topic === COOKIE_CHANGED) {
+        var changed = data === COOKIE_CHANGED_DATA_CHANGED
+            || data === COOKIE_CHANGED_DATA_ADDED
+            || data === COOKIE_CHANGED_DATA_DELETED;
+        // TODO: handle batch-deleted and cleared events
         // https://developer.mozilla.org/en-US/docs/XPCOM_Interface_Reference/nsICookieService
         if (changed) {
           var cookie = this.toCookie(subject);
           this.onChanged.fire([ {
             cookie : cookie,
-            removed : false
+            removed : data === COOKIE_CHANGED_DATA_DELETED
           } ]);
         }
 
@@ -105,12 +107,12 @@
 
   CookiesAPI.prototype.get = function(details, callback) {
     var url = this.parseUrl(details.url);
-    var enumerator = Services.cookies.getCookiesFromHost(url.domain);
+    var enumerator = Services.cookies.getCookiesFromHost(url.host);
     while (enumerator.hasMoreElements()) {
       var next = enumerator.getNext();
       var cookie = this.toCookie(next);
       var condition = true;
-      condition &= url.domain == cookie.domain;
+      condition &= url.host == cookie.domain;
       condition &= url.path.indexOf(cookie.path) == 0;
       condition &= details.name == cookie.name;
       if (condition) {
