@@ -43,7 +43,7 @@
           }
         }
         if (filter.types) {
-          if (filter.types.indexOf(details.type) == -1) {
+          if (filter.types.indexOf(details.type) === -1) {
             return;
           }
         }
@@ -56,17 +56,23 @@
         callback();
       }
 
+      var self = this;
       this.sink = function(details, callback) {
-        checkFilter(details, function() {
-          this.listener.call(this, details, callback);
-        });
-      }
+        checkFilter(details, self.listener.bind(this, details, callback));
+      };
     }
 
     Event.call(this, window, tabId, state, type);
 
     var superAddListener = this.addListener;
     this.addListener = function(listener, filter) {
+      // TODO: Use generic code for checking parameters.
+      if (!filter) {
+        throw "No filter provided to addListener";
+      }
+      if (!filter.urls) {
+        throw "No urls property provided to filter in addListener";
+      }
       var proxy = new ListenerProxy(listener, filter);
       superAddListener.call(this, proxy.sink);
       proxies.push(proxy);
@@ -76,10 +82,11 @@
     this.removeListener = function(listener) {
       for (let i=0; i<proxies.length; i++) {
         if (proxies[i].listener === listener) {
-          superRemoveListener(proxies[i].listener)
           proxies.splice(i, 1);
+          break;
         }
       }
+      superRemoveListener.call(this, listener);
     }
   }
 
