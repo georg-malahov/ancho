@@ -42,6 +42,8 @@
     },
 
     query: function(queryInfo, callback) {
+      // TODO: Currently we only handle currentWindow, windowId and active properties
+      // of queryInfo.
       let windows = [];
       let result = [];
       if (queryInfo.currentWindow ||

@@ -8,17 +8,17 @@
 var prepareWindow = require('./scripting').prepareWindow;
 
   var progressListener = {
-      // nsIWebProgressListener
-      onLocationChange: function(aProgress, aRequest, aURI) {
-        if (aURI.spec.indexOf('chrome-extension') === 0) {
-          prepareWindow(aProgress.DOMWindow.wrappedJSObject);
-        }
-      },
+    // nsIWebProgressListener
+    onLocationChange: function(aProgress, aRequest, aURI) {
+      if (aURI.spec.indexOf('chrome-extension') === 0) {
+        prepareWindow(aProgress.DOMWindow.wrappedJSObject);
+      }
+    },
 
-      onStateChange: function() {},
-      onProgressChange: function() {},
-      onStatusChange: function() {},
-      onSecurityChange: function() {}
+    onStateChange: function() {},
+    onProgressChange: function() {},
+    onStatusChange: function() {},
+    onSecurityChange: function() {}
   };
 
   function BrowserEvents(tabbrowser, extensionState) {
