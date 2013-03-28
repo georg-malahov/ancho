@@ -18,10 +18,8 @@
       request = tabId;
       tabId = null;
     }
-    if (!callback) {
-      // Dummy callback if no callback is provided.
-      callback = function() {}
-    }
+    callback = callback || function() {};
+
     var sender = Utils.getSender(self._state['id'], self._tab);
     event.fire([ request, sender, callback ], tabId);
   }
