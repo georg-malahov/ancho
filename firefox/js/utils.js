@@ -62,6 +62,15 @@
     return { id: extensionId, tab: { id: tabId } };
   };
 
+  exports.matchPatternToRegexp = function(matchPattern) {
+    // TODO: Implement this according to the spec.
+    // Each section (scheme, host, etc.) should be compared individually.
+    return matchPattern
+      .replace('<all_urls>', '*')
+      .replace(/\./g, '\\.')
+      .replace(/\*/g, '.*')
+  };
+
   exports.getLoadContext = function(aRequest) {
     var loadContext = null;
     try {
@@ -95,6 +104,15 @@
     } else {
       return str;
     }
+  };
+
+  exports.getChromeWindow = function(win) {
+    return win.QueryInterface(Ci.nsIInterfaceRequestor)
+      .getInterface(Ci.nsIWebNavigation)
+      .QueryInterface(Ci.nsIDocShellTreeItem)
+      .rootTreeItem
+      .QueryInterface(Ci.nsIInterfaceRequestor)
+      .getInterface(Ci.nsIDOMWindow);
   };
 
   // To consider:

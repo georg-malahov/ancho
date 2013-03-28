@@ -8,17 +8,13 @@
 
   var Event = require('./event');
   var Utils = require('./utils');
+  var chrome;
 
-
-  function TabsAPI(state, window) {
+  function TabsAPI(state, window, api) {
+    chrome = api;
     this._window = window;
     this._state = state;
     this._tab = Utils.getWindowId(window);
-
-    // Register Tab ID for later tabs.query call
-    state.registerTab(this._tab);
-    // TODO: unregister tab
-    // TODO: detect "real tabs" only
 
     // Event handlers
     this.onCreated = new Event(window, this._tab, this._state, 'tab.created');
@@ -46,15 +42,52 @@
     },
 
     query: function(queryInfo, callback) {
-      // TODO: selecting by the queryInfo parameter
-      if (typeof callback === 'function') {
-        var tabs = [];
-        var ids = this._state.tabIds();
-        while (ids.length) {
-          tabs.push({ id: ids.shift() });
+      // TODO: Currently we only handle currentWindow, windowId and active properties
+      // of queryInfo.
+      let windows = [];
+      let result = [];
+      if (queryInfo.currentWindow ||
+        (queryInfo.windowId && queryInfo.windowId === chrome.windows.WINDOW_ID_CURRENT)) {
+        // Just the current window.
+        let chromeWindow = Utils.getChromeWindow(this._window);
+        let windowType = chromeWindow.document.documentElement.getAttribute("windowtype");
+        if ('ancho-hidden' === windowType) {
+          // We're in the background window, so use the most recent browser window.
+          chromeWindow = Services.wm.getMostRecentWindow('navigator:browser');
+          windows.push(chromeWindow);
         }
-        callback(tabs);
+        else {
+          windows.push(chromeWindow);
+        }
       }
+      else {
+        var browserWindows = Services.wm.getEnumerator('navigator:browser');
+        while (browserWindows.hasMoreElements()) {
+          windows.push(browserWindows.getNext());
+        }
+      }
+
+      function createTabFromBrowser(browser) {
+        return {
+          id: Utils.getWindowId(browser.contentWindow),
+          url: browser.contentDocument.location.href
+        }
+      }
+
+      for (let i=0; i<windows.length; i++) {
+        let win = windows[i];
+        let tabbrowser = win.document.getElementById('content');
+        if (queryInfo.active) {
+          result.push(createTabFromBrowser(tabbrowser.selectedBrowser));
+        }
+        else {
+          for (let j=0; j<tabbrowser.browsers.length; j++) {
+            result.push(createTabFromBrowser(tabbrowser.browsers[j]));
+          }
+        }
+      }
+
+      callback(result);
     },
 
     create: function(createProperties, callback) {

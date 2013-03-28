@@ -10,6 +10,7 @@ var require = Require.createRequireForWindow(sandbox, baseURI);
 
 var ExtensionState = require('./state');
 var applyContentScripts = require('./scripting').applyContentScripts;
+var prepareWindow = require('./scripting').prepareWindow;
 var loadHtml = require('./scripting').loadHtml;
 var BrowserEvents = require('./browserEvents');
 var Toolbar = require('./toolbarSingleton');
@@ -96,16 +97,35 @@ window.addEventListener('load', function(event) {
         // is inappropriate for script inserting: neither 'document.head'
         // nor 'document.body' are defined.
         : 'chrome://ancho/content/html/blank.html';
+
   var browser = document.getElementById('content');
-  loadHtml(document, browser, spec, function(targetWindow) {
-    // load background scripts, if any
-    for (var i = 0; i < Config.backgroundScripts.length; i++) {
-      var script = targetWindow.document.createElement('script');
-      script.src = Config.hostExtensionRoot + Config.backgroundScripts[i];
-      targetWindow.document.head.appendChild(script);
-    }
-    AnchoExternal.__set(targetWindow.ancho.external);
-  });
+
+  function runBackground() {
+    loadHtml(document, browser, spec, function(targetWindow) {
+      // load background scripts, if any
+      for (var i = 0; i < Config.backgroundScripts.length; i++) {
+        var script = targetWindow.document.createElement('script');
+        script.src = Config.hostExtensionRoot + Config.backgroundScripts[i];
+        targetWindow.document.head.appendChild(script);
+      }
+      AnchoExternal.__set(targetWindow.ancho.external);
+    });
+  }
+
+  // We don't want the background scripts to run until the main browser window
+  // has loaded since some of them may depend on it being ready.
+  var browserWindow = Services.wm.getMostRecentWindow('navigator:browser');
+  if ('complete' === browserWindow.document.readyState) {
+    runBackground();
+  }
+  else {
+    browserWindow.document.addEventListener('readystatechange', function(e) {
+      if ('complete' === browserWindow.document.readyState) {
+        browserWindow.document.removeEventListener('readystatechange', arguments.callee, false);
+        runBackground();
+      }
+    }, false);
+  }
 }, false);
 
 window.addEventListener('unload', function(event) {

@@ -22,6 +22,8 @@
   }
 
   WindowsAPI.prototype = {
+    WINDOW_ID_CURRENT: -2,
+
     getCurrent: function(getInfo, callback) {
       callback({ id: Utils.getWindowId(this._contentWindow) });
     },

@@ -18,6 +18,8 @@
       request = tabId;
       tabId = null;
     }
+    callback = callback || function() {};
+
     var sender = Utils.getSender(self._state['id'], self._tab);
     event.fire([ request, sender, callback ], tabId);
   }

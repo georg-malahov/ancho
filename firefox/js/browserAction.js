@@ -98,6 +98,10 @@
       var loadHtml = require('./scripting').loadHtml;
       loadHtml(document, iframe, "chrome-extension://ancho/" + Config.browser_action.default_popup, function() {
         var body = iframe.contentDocument.body;
+        // Need to float the body so that it will resize to the contents of its children.
+        if (!body.style.cssFloat) {
+          body.style.cssFloat = 'left';
+        }
         // We need to intercept link clicks and open them in the current browser window.
         body.addEventListener("click", function(event) {
           var link = event.target;
@@ -105,6 +109,7 @@
             event.preventDefault();
             var browser = document.getElementById("content");
             browser.contentWindow.open(link.href, link.target);
+            panel.hidePopup();
             return false;
           }
         }, false);
@@ -118,10 +123,10 @@
 
         function resizePopup() {
           if (body.scrollHeight !== oldHeight && body.scrollWidth !== oldWidth) {
-            oldHeight = iframe.height = body.scrollHeight;
-            oldWidth = iframe.width = body.scrollWidth;
-            panel.sizeTo(oldWidth + getPanelBorderWidth('Left') + getPanelBorderWidth('Right') + 1,
-              oldHeight + getPanelBorderWidth('Top') + getPanelBorderWidth('Bottom') + 1);
+            oldHeight = iframe.height = body.scrollHeight + 1;
+            oldWidth = iframe.width = body.scrollWidth + 1;
+            panel.sizeTo(oldWidth + getPanelBorderWidth('Left') + getPanelBorderWidth('Right'),
+              oldHeight + getPanelBorderWidth('Top') + getPanelBorderWidth('Bottom'));
           }
         }
 
@@ -207,7 +212,8 @@
   };
 
   BrowserActionAPI.prototype.setBadgeBackgroundColor = function() {
-    throw new Error('Unsupported method');
+    // TODO: Implement this
+    // throw new Error('Unsupported method');
   };
 
   BrowserActionAPI.prototype.setBadgeText = function() {
@@ -227,8 +233,7 @@
     if (details && details.path) {
       this.currentIcon = details.path;
     } else {
-      throw new Error('Unsupported details when setting icon - '
-          + JSON.stringify(details));
+      // TODO: Support other properties for setIcon.
     }
     BrowserActionService.updateIcon();
   };
