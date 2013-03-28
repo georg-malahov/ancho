@@ -9,3 +9,55 @@ HKCR
 		}
 	}
 }
+
+HKLM
+{
+  NoRemove Software
+  {
+    NoRemove Policies
+    {
+      NoRemove Microsoft
+      {
+        NoRemove 'Internet Explorer'
+        {
+          NoRemove 'Low Rights'
+          {
+            NoRemove ElevationPolicy
+            {
+              ForceRemove '{F296CB18-1DBD-4B3B-B4B2-0C5318818D8D}' = s 'Ancho Background Server'
+              {
+                val AppName = s '%OBJECTFILENAME%'
+                val AppPath = s '%MODULEPATH%'
+                val CLSID = s '%APPID%'
+                val Policy = d '3'
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+HKCU
+{
+  NoRemove Software
+  {
+    NoRemove Microsoft
+    {
+      NoRemove Windows
+      {
+        NoRemove CurrentVersion
+        {
+          NoRemove 'Internet Settings'
+          {
+            PluggableProtocols
+            {
+              val chrome-extension = s ''
+            }
+          }
+        }
+      }
+    }
+  }
+}
