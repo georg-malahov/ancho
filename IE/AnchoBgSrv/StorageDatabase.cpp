@@ -64,8 +64,8 @@ StorageDatabase::~StorageDatabase()
 void StorageDatabase::setItem(const std::wstring &aKey, const std::wstring &aValue)
 {
   std::wostringstream query;
-  query << L"INSERT OR REPLACE INTO "
-        << mTableName << " (key, value) VALUES('"
+  query << L"INSERT OR REPLACE INTO '"
+        << mTableName << "' (key, value) VALUES('"
         << escapeString(aKey) << L"','" << escapeString(aValue)
         << L"');";
 
@@ -76,8 +76,8 @@ void StorageDatabase::setItem(const std::wstring &aKey, const std::wstring &aVal
 void StorageDatabase::getItem(const std::wstring &aKey, std::wstring &aValue)
 {
   std::wostringstream query;
-  query << L"SELECT * FROM "
-        << mTableName << L" WHERE key='"
+  query << L"SELECT * FROM '"
+        << mTableName << L"' WHERE key='"
         << escapeString(aKey) << L"';";
 
   SQLiteStatement statement(mDatabase, query.str());
@@ -97,8 +97,8 @@ void StorageDatabase::getItem(const std::wstring &aKey, std::wstring &aValue)
 void StorageDatabase::removeItem(const std::wstring &aKey)
 {
   std::wostringstream query;
-  query << L"DELETE FROM "
-        << mTableName << L" WHERE key='"
+  query << L"DELETE FROM '"
+        << mTableName << L"' WHERE key='"
         << escapeString(aKey) << L"';";
 
   SQLiteStatement statement(mDatabase, query.str());
@@ -108,7 +108,7 @@ void StorageDatabase::removeItem(const std::wstring &aKey)
 void StorageDatabase::getKeys(std::vector<std::wstring> &aKeys)
 {
   std::wostringstream query;
-  query << L"SELECT key FROM " << mTableName << L";";
+  query << L"SELECT key FROM '" << mTableName << L"';";
   ATLASSERT(aKeys.empty());
 
   SQLiteStatement statement(mDatabase, query.str());
@@ -123,8 +123,8 @@ void StorageDatabase::getKeys(std::vector<std::wstring> &aKeys)
 bool StorageDatabase::hasItem(const std::wstring &aKey)
 {
   std::wostringstream query;
-  query << L"SELECT count(*) FROM "
-        << mTableName << L" WHERE key='"
+  query << L"SELECT count(*) FROM '"
+        << mTableName << L"' WHERE key='"
         << escapeString(aKey) << L"';";
 
   SQLiteStatement statement(mDatabase, query.str());
@@ -140,7 +140,7 @@ bool StorageDatabase::hasItem(const std::wstring &aKey)
 void StorageDatabase::clear()
 {
   std::wostringstream query;
-  query << L"DELETE FROM "
+  query << L"DELETE FROM '"
         << mTableName << L"';";
 
   SQLiteStatement statement(mDatabase, query.str());
@@ -178,8 +178,8 @@ void StorageDatabase::close()
 void StorageDatabase::createTable()
 {
   std::wostringstream query;
-  query << L"CREATE TABLE IF NOT EXISTS "
-        << mTableName << L"(key TEXT PRIMARY KEY, value TEXT);";
+  query << L"CREATE TABLE IF NOT EXISTS '"
+        << mTableName << L"' (key TEXT PRIMARY KEY, value TEXT);";
 
   SQLiteStatement statement(mDatabase, query.str());
   statement.stepDone();

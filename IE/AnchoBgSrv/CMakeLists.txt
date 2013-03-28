@@ -121,7 +121,7 @@ set(${PROJECT_NAME}_MIDL_ARGUMENTS
                      "${${PROJECT_NAME}_IDL_FILE}"
                      /D $<$<CONFIG:Debug>:"_DEBUG"> $<$<CONFIG:Release>:"NDEBUG">
                      /D "MODULES_HAVE_EXPORT_PROPERTY"
-                     /I ${AnchoBgSrv_GENERATED_FILES_DIR}
+                     /I "${AnchoBgSrv_GENERATED_FILES_DIR}"
                      /nologo
                      /char signed
                      /env win32

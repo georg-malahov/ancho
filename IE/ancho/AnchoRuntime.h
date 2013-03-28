@@ -30,11 +30,12 @@ class ATL_NO_VTABLE CAnchoRuntime :
 {
   struct FrameRecord
   {
-    FrameRecord(CComPtr<IWebBrowser2> aBrowser = CComPtr<IWebBrowser2>(), bool aIsTopLevel = false)
-      : browser(aBrowser), isTopLevel(aIsTopLevel)
+    FrameRecord(CComPtr<IWebBrowser2> aBrowser = CComPtr<IWebBrowser2>(), bool aIsTopLevel = false, int aFrameId = -1)
+      : browser(aBrowser), frameId(aFrameId), isTopLevel(aIsTopLevel)
     { }
 
     CComPtr<IWebBrowser2> browser;
+    int frameId;
     bool isTopLevel;
   };
 
@@ -42,7 +43,7 @@ class ATL_NO_VTABLE CAnchoRuntime :
 public:
   // -------------------------------------------------------------------------
   // ctor
-  CAnchoRuntime() : m_WebBrowserEventsCookie(0), m_AnchoBrowserEventsCookie(0), m_ExtensionPageAPIPrepared(false), m_IsExtensionPage(false)
+  CAnchoRuntime() : m_WebBrowserEventsCookie(0), m_AnchoBrowserEventsCookie(0), m_ExtensionPageAPIPrepared(false), m_NextFrameId(0), m_IsExtensionPage(false)
   {
   }
 
@@ -129,20 +130,21 @@ private:
   HRESULT InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL bIsRefreshingMainFrame, documentLoadPhase aPhase);
   HRESULT InitializeExtensionScripting(BSTR bstrUrl);
 
+  void fillRequestInfo(SimpleJSObject &aInfo, const std::wstring &aUrl, const std::wstring &aMethod, const CAnchoRuntime::FrameRecord *aFrameRecord);
   struct BeforeRequestInfo
   {
     bool cancel;
     bool redirect;
     std::wstring newUrl;
   };
-  HRESULT fireOnBeforeRequest(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeRequestInfo &aOutInfo);
+  HRESULT fireOnBeforeRequest(const std::wstring &aUrl, const std::wstring &aMethod, const FrameRecord *aType, /*out*/ BeforeRequestInfo &aOutInfo);
 
   struct BeforeSendHeadersInfo
   {
     bool modifyHeaders;
     std::wstring headers;
   };
-  HRESULT fireOnBeforeSendHeaders(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeSendHeadersInfo &aOutInfo);
+  HRESULT fireOnBeforeSendHeaders(const std::wstring &aUrl, const std::wstring &aMethod, const CAnchoRuntime::FrameRecord *aFrameRecord, /*out*/ BeforeSendHeadersInfo &aOutInfo);
 
 
   HWND getTabWindow();
@@ -164,7 +166,9 @@ private:
   CComPtr<DAnchoBrowserEvents>            m_pBrowserEventSource;
   DWORD                                   m_WebBrowserEventsCookie;
   DWORD                                   m_AnchoBrowserEventsCookie;
+
   FrameMap                                m_Frames;
+  int                                     m_NextFrameId;//used for generating frameIds
 
   bool                                    m_ExtensionPageAPIPrepared;
   bool                                    m_IsExtensionPage;

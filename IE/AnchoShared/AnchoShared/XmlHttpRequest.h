@@ -97,7 +97,10 @@ public:
   // -------------------------------------------------------------------------
   // IXMLHttpRequest methods
   HRESULT STDMETHODCALLTYPE open(BSTR bstrMethod, BSTR bstrUrl, VARIANT varAsync, VARIANT bstrUser, VARIANT bstrPassword)
-  { return mRequest->open(bstrMethod, bstrUrl, varAsync, bstrUser, bstrPassword); }
+  {
+    mUrl = (wchar_t *)bstrUrl;
+    return mRequest->open(bstrMethod, bstrUrl, varAsync, bstrUser, bstrPassword);
+  }
 
   HRESULT STDMETHODCALLTYPE setRequestHeader(BSTR bstrHeader, BSTR bstrValue)
   { return mRequest->setRequestHeader(bstrHeader, bstrValue); }
@@ -117,11 +120,13 @@ public:
   HRESULT STDMETHODCALLTYPE get_status(long *plStatus)
   {
     HRESULT hr = mRequest->get_status(plStatus);
-    if (hr == S_OK && *plStatus == 0) { //Workaround - local file request returns 0
+    if (hr == S_OK && *plStatus == 0 && isExtensionPage(mUrl)) { //Workaround - local file request returns 0
       *plStatus = 200;
     }
     return hr;
   }
+
+  CComBSTR mMethod; std::wstring mUrl; CComVariant mAsync; CComVariant mUser; CComVariant mPassword;
 
   HRESULT STDMETHODCALLTYPE get_statusText(BSTR *pbstrStatus)
   { return mRequest->get_statusText(pbstrStatus); }

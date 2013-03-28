@@ -530,7 +530,7 @@ STDMETHODIMP CAnchoBackgroundAPI::storageGet(BSTR aStorageType, BSTR aKey, VARIA
   try {
     getStorageInstance(aStorageType).getItem(std::wstring(aKey), value);
   } catch (StorageDatabase::EItemNotFound &) {
-    aValue->vt = VT_UNKNOWN;
+    aValue->vt = VT_EMPTY;
     return S_OK;
   }
 

@@ -14,6 +14,7 @@
 #include "dllmain.h"
 
 #include <string>
+#include <ctime>
 
 #include <Iepmapi.h>
 #pragma comment(lib, "Iepmapi.lib")
@@ -201,11 +202,12 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
     if (isTop) {
       // Loading the main frame so reset the frame list.
       m_Frames.clear();
+      m_NextFrameId = 0;
     }
   }
   CComBSTR bstrUrl;
   removeUrlFragment(pURL->bstrVal, &bstrUrl);
-  m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop != VARIANT_FALSE);
+  m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop != VARIANT_FALSE, m_NextFrameId++);
 
   // Check if this is a new tab we are creating programmatically.
   // If so redirect it to the correct URL.
@@ -284,13 +286,15 @@ STDMETHODIMP CAnchoRuntime::OnBeforeRequest(VARIANT aReporter)
   reporter->getUrl(&url);
   reporter->getHTTPMethod(&method);
 
-  std::wstring type = L"other";
   FrameMap::const_iterator it = m_Frames.find(url.m_str);
+  const FrameRecord *frameRecord = NULL;
   if (it != m_Frames.end()) {
-    type = it->second.isTopLevel ? L"main_frame" : L"sub_frame";
+    frameRecord = &(it->second);
+  } else {
+    ATLTRACE(L"No frame record for %s\n", url.m_str);
   }
 
-  fireOnBeforeRequest(url.m_str, method.m_str, type, outInfo);
+  fireOnBeforeRequest(url.m_str, method.m_str, frameRecord, outInfo);
   if (outInfo.cancel) {
     reporter->cancelRequest();
   }
@@ -315,28 +319,48 @@ STDMETHODIMP CAnchoRuntime::OnBeforeSendHeaders(VARIANT aReporter)
   reporter->getUrl(&url);
   reporter->getHTTPMethod(&method);
 
-  std::wstring type = L"other";
   FrameMap::const_iterator it = m_Frames.find(url.m_str);
+  const FrameRecord *frameRecord = NULL;
   if (it != m_Frames.end()) {
-    type = it->second.isTopLevel ? L"main_frame" : L"sub_frame";
+    frameRecord = &(it->second);
+  } else {
+    ATLTRACE(L"No frame record for %s\n", url.m_str);
   }
 
-  fireOnBeforeSendHeaders(url.m_str, method.m_str, type, outInfo);
+  fireOnBeforeSendHeaders(url.m_str, method.m_str, frameRecord, outInfo);
   if (outInfo.modifyHeaders) {
     reporter->setNewHeaders(CComBSTR(outInfo.headers.c_str()).Detach());
   }
   return S_OK;
 }
+
+void
+CAnchoRuntime::fillRequestInfo(SimpleJSObject &aInfo, const std::wstring &aUrl, const std::wstring &aMethod, const CAnchoRuntime::FrameRecord *aFrameRecord)
+{
+  //TODO - get proper request ID
+  aInfo.setProperty(L"requestId", CComVariant(L"TODO_RequestId"));
+  aInfo.setProperty(L"url", CComVariant(aUrl.c_str()));
+  aInfo.setProperty(L"method", CComVariant(aMethod.c_str()));
+  aInfo.setProperty(L"tabId", CComVariant(m_TabID));
+  //TODO - find out parent frame id
+  aInfo.setProperty(L"parentFrameId", CComVariant(-1));
+  if (aFrameRecord) {
+    aInfo.setProperty(L"frameId", CComVariant(aFrameRecord->frameId));
+    aInfo.setProperty(L"type", CComVariant(aFrameRecord->isTopLevel ? L"main_frame" : L"sub_frame"));
+  } else {
+    aInfo.setProperty(L"frameId", CComVariant(-1));
+    aInfo.setProperty(L"type", CComVariant(L"other"));
+  }
+  time_t timeSinceEpoch = time(NULL);
+  aInfo.setProperty(L"timeStamp", CComVariant(double(timeSinceEpoch)*1000));
+}
 //----------------------------------------------------------------------------
 //
-HRESULT CAnchoRuntime::fireOnBeforeRequest(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeRequestInfo &aOutInfo)
+HRESULT CAnchoRuntime::fireOnBeforeRequest(const std::wstring &aUrl, const std::wstring &aMethod, const CAnchoRuntime::FrameRecord *aFrameRecord, /*out*/ BeforeRequestInfo &aOutInfo)
 {
   CComPtr<ComSimpleJSObject> info;
   IF_FAILED_RET(SimpleJSObject::createInstance(info));
-  info->setProperty(L"url", CComVariant(aUrl.c_str()));
-  info->setProperty(L"method", CComVariant(aMethod.c_str()));
-  info->setProperty(L"type", CComVariant(aType.c_str()));
-  info->setProperty(L"tabId", CComVariant(m_TabID));
+  fillRequestInfo(*info, aUrl, aMethod, aFrameRecord);
 
   CComPtr<ComSimpleJSArray> argArray;
   IF_FAILED_RET(SimpleJSArray::createInstance(argArray));
@@ -372,15 +396,13 @@ HRESULT CAnchoRuntime::fireOnBeforeRequest(const std::wstring &aUrl, const std::
 }
 //----------------------------------------------------------------------------
 //
-HRESULT CAnchoRuntime::fireOnBeforeSendHeaders(const std::wstring &aUrl, const std::wstring &aMethod, const std::wstring &aType, /*out*/ BeforeSendHeadersInfo &aOutInfo)
+HRESULT CAnchoRuntime::fireOnBeforeSendHeaders(const std::wstring &aUrl, const std::wstring &aMethod, const CAnchoRuntime::FrameRecord *aFrameRecord, /*out*/ BeforeSendHeadersInfo &aOutInfo)
 {
   aOutInfo.modifyHeaders = false;
   CComPtr<ComSimpleJSObject> info;
   IF_FAILED_RET(SimpleJSObject::createInstance(info));
-  info->setProperty(L"url", CComVariant(aUrl.c_str()));
-  info->setProperty(L"method", CComVariant(aMethod.c_str()));
-  info->setProperty(L"type", CComVariant(aType.c_str()));
-  info->setProperty(L"tabId", CComVariant(m_TabID));
+
+  fillRequestInfo(*info, aUrl, aMethod, aFrameRecord);
   info->setProperty(L"requestHeaders", CComVariant());
 
   CComPtr<ComSimpleJSArray> argArray;
@@ -439,6 +461,7 @@ HRESULT CAnchoRuntime::InitializeContentScripting(BSTR bstrUrl, VARIANT_BOOL isR
   // page is refreshed, so we need this workaround as well.
   if (isRefreshingMainFrame && (documentLoadStart == aPhase)) {
     m_Frames.clear();
+    m_NextFrameId = 0;
   }
   AddonMap::iterator it = m_Addons.begin();
   while(it != m_Addons.end()) {
