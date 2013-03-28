@@ -23,18 +23,17 @@ public :
     wchar_t modulePath[MAX_PATH];
     HINSTANCE hInstance = ::GetModuleHandle(NULL);
     ::GetModuleFileName(hInstance, modulePath, MAX_PATH);
-    wchar_t* lastSlash = wcsrchr(modulePath, '\\');
-    ATLASSERT(lastSlash != 0);
+    LPWSTR fileName = PathFindFileName(modulePath);
+    ATLASSERT(fileName > modulePath);
 
-    LPCWSTR objectFilename;
-    *lastSlash = 0;
-    objectFilename = lastSlash + 1;
+    // Null-terminate the path.
+    *(fileName-1) = 0;
 
     ATL::_ATL_REGMAP_ENTRY aMapEntries [] =
     {
       { OLESTR("APPID"), L"{FBA7ED0C-1181-476A-AEDE-F0AF49EF80F7}" },
       { OLESTR("MODULEPATH"), modulePath },
-      { OLESTR("OBJECTFILENAME"), objectFilename },
+      { OLESTR("OBJECTFILENAME"), fileName },
       { NULL, NULL }
     };
     return ATL::_pAtlModule->UpdateRegistryFromResource(IDR_ANCHOBGSRV, bRegister, aMapEntries);
