@@ -79,7 +79,7 @@ public:
   /**
    * Filters out some navigation keys by filtering accelerators defined in SalsitaToolbarBrowserCustomization.cpp as blockedAccelerators.
    */
-  STDMETHOD(TranslateAccelerator)(DWORD hWnd, DWORD nMessage, DWORD wParam, DWORD lParam, BSTR bstrGuidCmdGroup, DWORD nCmdID, HRESULT *dwRetVal)
+  STDMETHOD(TranslateAccelerator)(DWORD_PTR hWnd, DWORD nMessage, DWORD_PTR wParam, DWORD_PTR lParam, BSTR bstrGuidCmdGroup, DWORD nCmdID, HRESULT *dwRetVal)
   {
     ENSURE_RETVAL(dwRetVal);
     *dwRetVal = S_FALSE;

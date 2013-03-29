@@ -51,7 +51,7 @@ void CHtmlToolbarWindow::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VARIANT *pUR
   if (hBrowserWnd && !::GetProp(hBrowserWnd, PROPPROC)) {
     // Subclass the window so we can handle the focus messages.
     WNDPROC fnOldWndProc =
-      (WNDPROC) ::SetWindowLongPtrW(hBrowserWnd, GWL_WNDPROC, (LONG_PTR) WindowProc);
+      (WNDPROC) ::SetWindowLongPtrW(hBrowserWnd, GWLP_WNDPROC, (LONG_PTR) WindowProc);
     ::SetProp(hBrowserWnd, PROPPROC, fnOldWndProc);
     ::SetProp(hBrowserWnd, PROPINST, this);
   }

@@ -120,7 +120,7 @@ HRESULT CAnchoRuntime::Init()
   // Registering tab in service - obtains tab id and assigns it to the tab as property
   IF_FAILED_RET(m_pAnchoService->registerRuntime((INT)getFrameTabWindow(), this, m_HeartbeatSlave.id(), &m_TabID));
   HWND hwnd;
-  m_pWebBrowser->get_HWND((long*)&hwnd);
+  m_pWebBrowser->get_HWND((SHANDLE_PTR*)&hwnd);
   ::SetProp(hwnd, s_AnchoTabIDPropertyName, (HANDLE)m_TabID);
 
   CComObject<CAnchoBrowserEvents>* pBrowserEventSource;
