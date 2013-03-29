@@ -456,12 +456,17 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
       CComPtr<IWebBrowser2> browser;
       IF_FAILED_RET(getBrowserForHTMLDocument(m_Doc, &browser));
 
+      CComVariant tmp;
+      browser->GetProperty(CComBSTR(L"NavigateURL"), &tmp);
+      std::wstring navigateUrl = tmp.bstrVal;
+
       CComBSTR topLevelUrl; // = var.bstrVal;
       IF_FAILED_RET(browser->get_LocationURL(&topLevelUrl));
       // If we're refreshing then the sink won't know it is a frame, and the URL
       // will match the one already loaded into the browser.
       std::wstring strippedTopLevelUrl = stripFragmentFromUrl(std::wstring(topLevelUrl.m_str));
-      m_IsRefreshingMainFrame = !(pSink->IsFrame()) && (strippedTopLevelUrl == std::wstring(bstrUrl.m_str));
+      m_IsRefreshingMainFrame = !(pSink->IsFrame())
+              && (strippedTopLevelUrl == std::wstring(bstrUrl.m_str) || stripFragmentFromUrl(navigateUrl) == std::wstring(bstrUrl.m_str));
 
       // We only want to handle the top-level request and any frames, not subordinate
       // requests like images. Usually the desired requests will have a bind context,
