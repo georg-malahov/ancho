@@ -19,6 +19,8 @@
 #include <Iepmapi.h>
 #pragma comment(lib, "Iepmapi.lib")
 
+#include "WindowDocumentMap.h"
+WindowDocumentMap gWindowDocumentMap;
 /*============================================================================
  * class CAnchoRuntime
  */
@@ -90,6 +92,7 @@ HRESULT CAnchoRuntime::Cleanup()
   AtlUnadvise(m_pWebBrowser, DIID_DWebBrowserEvents2, m_WebBrowserEventsCookie);
   AtlUnadvise(m_pBrowserEventSource, IID_DAnchoBrowserEvents, m_AnchoBrowserEventsCookie);
 
+  gWindowDocumentMap.eraseTab(m_TabID);
   return S_OK;
 }
 
@@ -210,6 +213,28 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
   m_Frames[(BSTR) bstrUrl] = FrameRecord(pWebBrowser, isTop != VARIANT_FALSE, m_NextFrameId++);
 
   pWebBrowser->PutProperty(CComBSTR(L"NavigateURL"), CComVariant(*pURL));
+
+  SHANDLE_PTR hwndBrowser = NULL;
+  pWebBrowser->get_HWND(&hwndBrowser);
+
+  if (isTop) {
+    //Fill information about current document
+    CComPtr<IDispatch> tmp;
+    pWebBrowser->get_Document(&tmp);
+    CComQIPtr<IHTMLDocument2> doc = tmp;
+    CComQIPtr<IOleWindow> docWin = doc;
+    HWND docWinHWND = NULL;
+    if (docWin) {
+      docWin->GetWindow(&docWinHWND);
+    }
+    if (docWinHWND) {
+      gWindowDocumentMap.put(WindowDocumentRecord(docWinHWND, m_TabID, m_pWebBrowser, pWebBrowser, doc));
+    }
+    HWND tabWindow = getTabWindow();
+    if (tabWindow) {
+      gWindowDocumentMap.put(WindowDocumentRecord(tabWindow, m_TabID, m_pWebBrowser, pWebBrowser, doc));
+    }
+  }
 
   // Check if this is a new tab we are creating programmatically.
   // If so redirect it to the correct URL.

@@ -296,60 +296,56 @@ CAnchoPassthruAPP::~CAnchoPassthruAPP()
 STDMETHODIMP CAnchoPassthruAPP::fireOnBeforeHeaders(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<IWebRequestReporter> aReporter)
 {
   if (!m_BrowserEvents) {
-    if (!m_Doc) {
-      HRESULT hr = getDocumentFromSink(aSink, m_Doc);
-      if (S_OK != hr) {
-        return hr;
-      }
-    }
-    IF_FAILED_RET(getEventsFromSink(aSink, aUrl, m_BrowserEvents));
-  }
-  if (m_BrowserEvents) {
-    m_BrowserEvents->OnBeforeSendHeaders(CComVariant(aReporter.p));
-  }
-  return S_OK;
-}
-
-STDMETHODIMP CAnchoPassthruAPP::getDocumentFromSink(CComPtr<CAnchoProtocolSink> aSink, CComPtr<IHTMLDocument2> &aDoc)
-{
-  if (!m_Doc) {
-    CComPtr<IWindowForBindingUI> windowForBindingUI;
-    HRESULT hr = S_OK;
-
-    aSink->QueryServiceFromClient(IID_IWindowForBindingUI, &windowForBindingUI);
-    if (!windowForBindingUI) {
-      return E_FAIL;
-    }
-    HWND hwnd;
-    if (FAILED(windowForBindingUI->GetWindow(IID_IAuthenticate, &hwnd))) {
-      HRESULT hr = windowForBindingUI->GetWindow(IID_IHttpSecurity, &hwnd);
+    if (!m_DocumentRecord.window) {
+      HWND hwnd = NULL;
+      HRESULT hr = getDocumentWindowFromSink(aSink, hwnd);
       if (FAILED(hr)) {
-        ATLTRACE(L"CAnchoPassthruAPP - failed to obtain window handle");
         return hr;
       }
+      m_DocumentRecord = gWindowDocumentMap.get(hwnd);
+      m_Doc = m_DocumentRecord.document;
     }
 
-    hr = getHTMLDocumentForHWND(hwnd, &aDoc);
+    if (m_DocumentRecord.window) {
+      IF_FAILED_RET(getEventsFromBrowser(m_DocumentRecord.topLevelBrowser, m_BrowserEvents));
+    }
+  }
+
+  if (m_BrowserEvents) {
+    IF_FAILED_RET(m_BrowserEvents->OnBeforeSendHeaders(CComVariant(aReporter.p)));
+    return S_OK;
+  }
+  return E_FAIL;
+}
+
+STDMETHODIMP CAnchoPassthruAPP::getDocumentWindowFromSink(CComPtr<CAnchoProtocolSink> aSink, HWND &aWinHWND)
+{
+  CComPtr<IWindowForBindingUI> windowForBindingUI;
+
+  aSink->QueryServiceFromClient(IID_IWindowForBindingUI, &windowForBindingUI);
+  if (!windowForBindingUI) {
+    return E_FAIL;
+  }
+  aWinHWND = NULL;
+  if (FAILED(windowForBindingUI->GetWindow(IID_IAuthenticate, &aWinHWND))) {
+    HRESULT hr = windowForBindingUI->GetWindow(IID_IHttpSecurity, &aWinHWND);
     if (FAILED(hr)) {
-      return S_FALSE;
+      ATLTRACE(L"CAnchoPassthruAPP - failed to obtain window handle, url = %s\n", aSink->getUrl().c_str());
+      return hr;
     }
   }
   return S_OK;
 }
 
-STDMETHODIMP CAnchoPassthruAPP::getEventsFromSink(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<DAnchoBrowserEvents> &aEvents)
+STDMETHODIMP CAnchoPassthruAPP::getEventsFromBrowser(CComPtr<IWebBrowser2> aBrowser, CComPtr<DAnchoBrowserEvents> &aEvents)
 {
-  ATLASSERT(m_Doc);
-
-  CComPtr<IWebBrowser2> browser;
-  IF_FAILED_RET(getBrowserForHTMLDocument(m_Doc, &browser));
-
   CComVariant var;
-  IF_FAILED_RET(browser->GetProperty(L"_anchoBrowserEvents", &var));
+  IF_FAILED_RET(aBrowser->GetProperty(L"_anchoBrowserEvents", &var));
 
   CComQIPtr<DAnchoBrowserEvents> events = var.pdispVal;
   aEvents = events;
   if (!aEvents) {
+    ATLTRACE(L"CAnchoPassthruAPP - failed to obtain browser events object\n");
     return E_FAIL;
   }
   return S_OK;
@@ -378,19 +374,24 @@ STDMETHODIMP CAnchoPassthruAPP::StartEx(
   } else {
     method = L"GET";
   }
-
+  ATLTRACE(L"CAnchoPassthruAPP - processing %s\n", rawUri);
   IF_FAILED_RET(__super::StartEx(pUri, pOIProtSink, pOIBindInfo, grfPI, dwReserved));
 
   if (!m_BrowserEvents) {
-    if (!m_Doc) {
-      HRESULT hr = getDocumentFromSink(pSink, m_Doc);
-      if (S_OK != hr) {
-        //We need to return success - otherwise the request would be thrown away
-        return S_OK;//hr;
+    if (!m_DocumentRecord.window) {
+      HWND hwnd = NULL;
+      if FAILED(getDocumentWindowFromSink(pSink, hwnd)) {
+        return S_OK;
       }
+      m_DocumentRecord = gWindowDocumentMap.get(hwnd);
+      m_Doc = m_DocumentRecord.document;
     }
-    IF_FAILED_RET(getEventsFromSink(pSink, rawUri, m_BrowserEvents));
+
+    if (m_DocumentRecord.window) {
+      IF_FAILED_RET(getEventsFromBrowser(m_DocumentRecord.topLevelBrowser, m_BrowserEvents));
+    }
   }
+
   if (m_BrowserEvents) {
     WebRequestReporterComObject * pNewObject = NULL;
     if (SUCCEEDED(WebRequestReporterComObject::CreateInstance(&pNewObject))) {
@@ -429,8 +430,33 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
     CComBSTR bstrUrl = params[0];
     CComBSTR bstrAdditional = params[1];
     pSink->FreeSwitchParams(params);
+    ATLTRACE(L"CAnchoPassthruAPP - Continue, url = %s\n", bstrUrl);
 
     if (!m_BrowserEvents) {
+      if (!m_DocumentRecord.window) {
+        HWND hwnd = NULL;
+        HRESULT hr = getDocumentWindowFromSink(pSink, hwnd);
+        if (S_FALSE == hr) {
+          // Not ready to get the window yet so we'll try again with the next notification.
+          if (data->dwState == ANCHO_SWITCH_REDIRECT) {
+            // Remember the redirect so we can trigger the corresponding event later.
+            m_Redirects.push_back(std::make_pair(bstrUrl, bstrAdditional));
+          }
+          return S_FALSE;
+        }
+        m_DocumentRecord = gWindowDocumentMap.get(hwnd);
+        m_Doc = m_DocumentRecord.document;
+      }
+
+      if (m_DocumentRecord.window) {
+        IF_FAILED_RET(getEventsFromBrowser(m_DocumentRecord.topLevelBrowser, m_BrowserEvents));
+      }
+    }
+    if (!m_BrowserEvents) {
+        return S_OK;
+    }
+
+    /*if (!m_BrowserEvents) {
       if (!m_Doc) {
         HRESULT hr = getDocumentFromSink(pSink, m_Doc);
         if (FAILED(hr)) {
@@ -450,18 +476,18 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
       if (!m_BrowserEvents) {
         return S_OK;;
       }
-    }
+    }*/
 
     {
-      CComPtr<IWebBrowser2> browser;
-      IF_FAILED_RET(getBrowserForHTMLDocument(m_Doc, &browser));
+      /*CComPtr<IWebBrowser2> browser;
+      IF_FAILED_RET(getBrowserForHTMLDocument(m_Doc, &browser));*/
 
       CComVariant tmp;
-      browser->GetProperty(CComBSTR(L"NavigateURL"), &tmp);
+      m_DocumentRecord.topLevelBrowser->GetProperty(CComBSTR(L"NavigateURL"), &tmp);
       std::wstring navigateUrl = tmp.bstrVal;
 
       CComBSTR topLevelUrl; // = var.bstrVal;
-      IF_FAILED_RET(browser->get_LocationURL(&topLevelUrl));
+      IF_FAILED_RET(m_DocumentRecord.topLevelBrowser->get_LocationURL(&topLevelUrl));
       // If we're refreshing then the sink won't know it is a frame, and the URL
       // will match the one already loaded into the browser.
       std::wstring strippedTopLevelUrl = stripFragmentFromUrl(std::wstring(topLevelUrl.m_str));
@@ -474,9 +500,11 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
       // so we check if the URL of the request matches the URL of the browser to handle
       // that case.
       if (!(pSink->IsFrame()) && !m_IsRefreshingMainFrame) {
+        ATLTRACE(L"CAnchoPassthruAPP - %s is not a frame.\n", bstrUrl);
         return S_OK;
       }
     }
+    ATLTRACE(L"CAnchoPassthruAPP - %s is frame.\n", bstrUrl);
 
     ATLASSERT(m_Doc != NULL);
 

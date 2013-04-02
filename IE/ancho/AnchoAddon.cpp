@@ -187,7 +187,7 @@ STDMETHODIMP CAnchoAddon::InitializeContentScripting(IWebBrowser2* pBrowser, BST
 
   // get content our API
   IF_FAILED_RET(m_pAddonBackground->GetContentInfo(m_InstanceID, bstrUrl, &m_pContentInfo));
-
+  ATLTRACE(L"ANCHO - GetContentInfo() succeeded");
   CString s;
   s.Format(_T("Ancho content [%s] [%i]"), m_sExtensionName, m_InstanceID);
   IF_FAILED_RET(m_Magpie->Init((LPWSTR)(LPCWSTR)s));

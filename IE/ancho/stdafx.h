@@ -27,6 +27,10 @@
 #include <exdispid.h>
 #include <activscp.h>
 
+#include <map>
+#include <string>
+
+
 #include <anchocommons.h>
 
 using namespace ATL;

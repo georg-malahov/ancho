@@ -116,6 +116,11 @@ set_source_files_properties(
     GENERATED 1
   )
 
+set(MIDL_ENV_ARG win32)
+if (${CMAKE_CL_64})
+  set(MIDL_ENV_ARG win64)
+endif (${CMAKE_CL_64})
+
 # MIDL
 set(${PROJECT_NAME}_MIDL_ARGUMENTS 
                      "${${PROJECT_NAME}_IDL_FILE}"
@@ -124,7 +129,7 @@ set(${PROJECT_NAME}_MIDL_ARGUMENTS
                      /I "${AnchoBgSrv_GENERATED_FILES_DIR}"
                      /nologo
                      /char signed
-                     /env win32
+                     /env ${MIDL_ENV_ARG}
                      /Oicf
                      /tlb "${${PROJECT_NAME}_MIDL_TLB_FILE}"
                      /h "${${PROJECT_NAME}_MIDL_I_H_FILE}"
