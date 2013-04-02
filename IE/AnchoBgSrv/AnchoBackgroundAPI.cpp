@@ -72,7 +72,7 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
   IF_FAILED_RET(m_Magpie->AddFilesystemScriptLoader((LPWSTR)(LPCWSTR)sPath));
 
   // add a loder for scripts in this exe file
-  IF_FAILED_RET(m_Magpie->AddResourceScriptLoader((ULONG)_AtlModule.GetResourceInstance()));
+  IF_FAILED_RET(m_Magpie->AddResourceScriptLoader((HANDLE_PTR)_AtlModule.GetResourceInstance()));
 
 #ifndef ANCHO_DISABLE_LOGWINDOW
   // advise logger
@@ -285,7 +285,7 @@ HRESULT CAnchoBackgroundAPI::appendJSONFileToVariableAssignment(CString aFileNam
                      std::istreambuf_iterator<char>());
 
   CString code;
-  code.Format(L"%s = %s;", aVariableName, CA2W(loadedCode.c_str()));
+  code.Format(L"%s = %hs;", aVariableName, loadedCode.c_str());
 
   aCode += code;
   return S_OK;

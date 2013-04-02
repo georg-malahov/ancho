@@ -23,7 +23,7 @@ set(${PROJECT_NAME}_HEADERS
   "${${PROJECT_NAME}_INC_DIR}/${PROJECT_NAME}/XmlHttpRequest.h"
   )
 
-set(${PROJECT_NAME}_SOURCES 
+set(${PROJECT_NAME}_SOURCES
   "${${PROJECT_NAME}_SRC_DIR}/AnchoShared.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/dllmain.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/stdafx.cpp"
@@ -86,7 +86,7 @@ if (${CMAKE_CL_64})
   set(MIDL_ENV_ARG win64)
 endif (${CMAKE_CL_64})
 
-set(${PROJECT_NAME}_MIDL_ARGUMENTS 
+set(${PROJECT_NAME}_MIDL_ARGUMENTS
                      "${${PROJECT_NAME}_IDL_FILE}"
                      /D $<$<CONFIG:Debug>:"_DEBUG"> $<$<CONFIG:Release>:"NDEBUG">
                      /D "MODULES_HAVE_EXPORT_PROPERTY"
@@ -122,8 +122,8 @@ source_group("Resources" FILES ${${PROJECT_NAME}_RC_FILES})
 
 ################# MAIN TARGET SETUP #########################
 
-add_library(${PROJECT_NAME} SHARED 
-  ${${PROJECT_NAME}_HEADERS} 
+add_library(${PROJECT_NAME} SHARED
+  ${${PROJECT_NAME}_HEADERS}
   ${${PROJECT_NAME}_SOURCES}
   ${${PROJECT_NAME}_GENERATED_FILES}
   ${${PROJECT_NAME}_RC_FILES}
@@ -134,6 +134,11 @@ target_link_libraries(${PROJECT_NAME} anchocommons)
 
 # set UNICODE
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_DEFINITIONS _UNICODE,UNICODE)
+
+# _WIN64
+if (${CMAKE_CL_64})
+  add_definitions(-DWIN64 -D_WIN64)
+endif (${CMAKE_CL_64})
 
 #Generating files in pre-build step
 add_custom_command(TARGET ${PROJECT_NAME}
