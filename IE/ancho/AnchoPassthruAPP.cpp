@@ -456,32 +456,7 @@ STDMETHODIMP CAnchoPassthruAPP::Continue(PROTOCOLDATA* data)
         return S_OK;
     }
 
-    /*if (!m_BrowserEvents) {
-      if (!m_Doc) {
-        HRESULT hr = getDocumentFromSink(pSink, m_Doc);
-        if (FAILED(hr)) {
-          return hr;
-        };
-        if (S_FALSE == hr) {
-          // Not ready to get the window yet so we'll try again with the next notification.
-          if (data->dwState == ANCHO_SWITCH_REDIRECT) {
-            // Remember the redirect so we can trigger the corresponding event later.
-            m_Redirects.push_back(std::make_pair(bstrUrl, bstrAdditional));
-          }
-          return S_FALSE;
-        }
-      }
-      IF_FAILED_RET(getEventsFromSink(pSink, bstrUrl, m_BrowserEvents));
-
-      if (!m_BrowserEvents) {
-        return S_OK;;
-      }
-    }*/
-
     {
-      /*CComPtr<IWebBrowser2> browser;
-      IF_FAILED_RET(getBrowserForHTMLDocument(m_Doc, &browser));*/
-
       CComVariant tmp;
       m_DocumentRecord.topLevelBrowser->GetProperty(CComBSTR(L"NavigateURL"), &tmp);
       std::wstring navigateUrl = tmp.bstrVal;
