@@ -37,6 +37,7 @@ public:
     SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_DOCUMENTCOMPLETE, BrowserDocumentCompleteEvent)
     SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_WINDOWCLOSING, BrowserWindowClosing)
     SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_NAVIGATECOMPLETE2, BrowserNavigateCompleteEvent)
+    SINK_ENTRY_EX(1, DIID_DWebBrowserEvents2, DISPID_PROGRESSCHANGE, BrowserProgressChange)
   END_SINK_MAP()
 
   virtual LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -47,6 +48,7 @@ public:
   STDMETHOD_(void, BrowserDocumentCompleteEvent)(IDispatch *pDisp, VARIANT *URL);
   STDMETHOD_(void, BrowserWindowClosing)(VARIANT_BOOL IsChildWindow, VARIANT_BOOL *Cancel);
   STDMETHOD_(void, BrowserNavigateCompleteEvent)(IDispatch *pDisp, VARIANT *URL);
+  STDMETHOD_(void, BrowserProgressChange)(LONG Progress, LONG ProgressMax);
 
 protected:
   CHtmlPanel();
@@ -55,4 +57,5 @@ protected:
   virtual void OnBrowserDocumentComplete(LPDISPATCH pDisp, VARIANT *URL);
   virtual void OnBrowserWindowClosing(VARIANT_BOOL IsChildWindow, VARIANT_BOOL *Cancel);
   virtual void OnBrowserNavigateComplete(IDispatch *pDisp, VARIANT *URL);
+  virtual void OnBrowserProgressChange(LONG Progress, LONG ProgressMax);
 };

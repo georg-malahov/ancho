@@ -128,6 +128,10 @@
       callbackID = external.setBrowserActionUpdateCallback(browserTabID, initBrowserActions);
       window.onload = initBrowserActions;
     }
+
+    //Ensure right context for the initBrowserActionPage call
+    //it is a workaround for direct C++ access issue
+    window.initBrowserActionPage = initBrowserActionPage;
   </script>
 
 </head>

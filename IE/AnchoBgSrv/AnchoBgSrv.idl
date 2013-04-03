@@ -34,6 +34,7 @@ interface IAnchoAddonService : IUnknown
 
   HRESULT webBrowserReady();
 
+  HRESULT getInternalProtocolParameters([out] BSTR * aServiceHost, [out] BSTR * aServicePath);
   HRESULT registerBrowserActionToolbar([in] INT aFrameTab, [out] BSTR * aUrl, [out] INT*aTabId);
   HRESULT unregisterBrowserActionToolbar([in] INT aTabId);
   HRESULT getDispatchObject([out, retval] IDispatch **aRet);
