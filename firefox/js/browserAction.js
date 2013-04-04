@@ -10,28 +10,41 @@
   var Config = require('./config');
 
   const BUTTON_ID = '__ANCHO_BROWSER_ACTION_BUTTON__';
-  const NAVIGATOR_TOOLBOX = "navigator-toolbox";
-  const TOOLBAR_ID = "nav-bar";
+  const CANVAS_ID = '__ANCHO_BROWSER_ACITOON_CANVAS__';
+  const HBOX_ID = '__ANCHO_BROWSER_ACTION_HBOX__';
+  const IMAGE_ID = '__ANCHO_BROWSER_ACTION_IMAGE__'
+  const NAVIGATOR_TOOLBOX = 'navigator-toolbox';
+  const TOOLBAR_ID = 'nav-bar';
+
+  const BROWSER_ACTION_ICON_WIDTH = 19;
+  const BROWSER_ACTION_ICON_HEIGHT = 19;
 
   var BrowserActionService = {
     iconEnabled: false,
-    currentIcon: null,
     buttonId: null,
+    badgeText: null,
+    badgeBackgroundColor: [ 255, 0, 0 , 255 ],
+    tabBadgeText: {},
+    tabBadgeBackgroundColor: {},
 
     init: function() {
       // TODO: this.onClicked = new Event();
-      this.iconEnabled = Config.browser_action
-          && Config.browser_action.default_icon ? true : false;
-      this.currentIcon = this.iconEnabled ? Config.hostExtensionRoot
-          + Config.browser_action.default_icon : '';
+      this.iconEnabled = Config.browser_action && Config.browser_action.default_icon;
 
       this.buttonId = BUTTON_ID;
       var self = this;
 
-      WindowWatcher.register(function(win) {
+      WindowWatcher.register(function(win, context) {
         self.startup(win);
-      }, function(win) {
+        var tabbrowser = win.document.getElementById('content');
+        var container = tabbrowser.tabContainer;
+        context.listener = function() {
+          self.setIcon(win, {});
+        };
+        container.addEventListener('TabSelect', context.listener, false);
+      }, function(win, context) {
         self.shutdown(win);
+        container.removeEventListener('TabSelect', context.listener, false);
       });
     },
 
@@ -53,7 +66,6 @@
       toolbarButton.setAttribute("removable", "true");
       toolbarButton.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
       toolbarButton.setAttribute("label", Config.extensionName);
-      toolbarButton.style.listStyleImage = "url(" + this.currentIcon + ")";
 
       document.getElementById(NAVIGATOR_TOOLBOX).palette.appendChild(toolbarButton);
       var currentset = toolbar.getAttribute("currentset").split(",");
@@ -87,9 +99,15 @@
       toolbarButton.appendChild(panel);
       panel.appendChild(iframe);
 
+      var hbox = document.createElement("hbox");
+      hbox.id = HBOX_ID;
+      hbox.setAttribute('hidden', 'true');
+      panel.appendChild(hbox);
+
       var self = this;
       toolbarButton.addEventListener('click', function(event) { self.clickHandler(event); }, false);
-      this.setIcon(window, this.currentIcon, true);
+      var iconPath = this.iconEnabled ? Config.hostExtensionRoot + Config.browser_action.default_icon : '';
+      this.setIcon(window, { path: iconPath });
     },
 
     showPopup: function(panel, iframe, document) {
@@ -157,35 +175,141 @@
       panel.openPopup(toolbarButton, "after_start", 0, 0, false, false);
     },
 
-    setIcon: function(window, iconUrl, notAttach) {
-      var id = this.buttonId;
-      var element = window.document.getElementById(id);
-      // if the button is available set new icon
-      if (element) {
-        element.style.listStyleImage = 'url("' + iconUrl + '")';
+    _drawButton: function(tabId, button, canvas) {
+      var ctx = canvas.getContext("2d");
+      ctx.textBaseline = "top";
+      ctx.font = "bold 9px sans-serif";
+
+      var text = this.getBadgeText(tabId);
+      if (text)
+      {
+        var w = ctx.measureText(text).width;
+        var h = 7;
+
+        var rp = ((canvas.width - 4) > w) ? 2 : 1; // right padding = 2, or 1 if text is wider
+        var x = canvas.width - w - rp;
+        var y = canvas.height - h - 1; // 1 = bottom padding
+
+        var color = this.getBadgeBackgroundColor(tabId);
+        if (color) {
+          ctx.fillStyle = color;
+        }
+        else {
+          ctx.fillStyle = "#f00"; // default color is red
+        }
+        ctx.fillRect(x-rp, y-1, w+rp+rp, h+2);
+        ctx.fillStyle = "#fff"; // text color
+        ctx.fillText(text, x, y);
+      }
+
+      button.image = canvas.toDataURL("image/png", "");  // set new toolbar image
+    },
+
+    setIcon: function(window, details) {
+      var document = window.document;
+      var hbox = document.getElementById(HBOX_ID);
+      var canvas = document.getElementById(CANVAS_ID);
+      if (!canvas) {
+        canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
+        canvas.id = CANVAS_ID;
+        hbox.appendChild(canvas);
+      }
+      var img = document.getElementById(IMAGE_ID);
+      if (!img) {
+        img = document.createElementNS('http://www.w3.org/1999/xhtml', 'img');
+        img.id = IMAGE_ID;
+        hbox.appendChild(img);
+      }
+
+      canvas.setAttribute("width", BROWSER_ACTION_ICON_WIDTH);
+      canvas.setAttribute("height", BROWSER_ACTION_ICON_HEIGHT);
+      var ctx = canvas.getContext("2d");
+
+      var button = document.getElementById(this.buttonId);
+      var browser = document.getElementById("content");
+      var tabId = Utils.getWindowId(browser.contentWindow);
+
+      var self = this;
+      if (details.path) {
+        img.onload = function() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          self._drawButton(tabId, button, canvas, ctx);
+        };
+        img.src = details.path;
+      }
+      else if (details.imageData) {
+        ctx.putImageData(details.imageData, 0, 0);
+        self._drawButton(tabId, button, canvas, ctx);
+      }
+      else {
+        // No image provided so just update the badge using the existing image.
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        self._drawButton(tabId, button, canvas, ctx);
       }
     },
 
-    updateIcon: function() {
+    updateIcon: function(details) {
       var self = this;
       WindowWatcher.forAllWindows(function(window) {
-        self.setIcon(window, self.currentIcon);
+        self.setIcon(window, details);
       });
     },
 
     shutdown: function(window) {
-      document = window.document;
-      var toolbarButton = document.getElementById(this.buttonId);
-      var toolbar = document.getElementById(TOOLBAR_ID);
-      var palette = document.getElementById(NAVIGATOR_TOOLBOX).palette;
-      toolbar.removeChild(toolbarButton);
-      palette.removeChild(toolbarButton);
+      if (this.iconEnabled) {
+        document = window.document;
+        var toolbarButton = document.getElementById(this.buttonId);
+        var toolbar = document.getElementById(TOOLBAR_ID);
+        var palette = document.getElementById(NAVIGATOR_TOOLBOX).palette;
+        toolbar.removeChild(toolbarButton);
+        palette.removeChild(toolbarButton);
+      }
     },
 
     startup: function(window) {
       if (this.iconEnabled) {
         this.installIcon(window);
       }
+    },
+
+    getBadgeBackgroundColor: function(tabId) {
+      if (this.tabBadgeBackgroundColor[tabId]) {
+        return this.tabBadgeBackgroundColor[tabId];
+      }
+      else {
+        return this.badgeBackgroundColor;
+      }
+    },
+
+    getBadgeText: function(tabId) {
+      if (this.tabBadgeText[tabId]) {
+        return this.tabBadgeText[tabId];
+      }
+      else {
+        return this.badgeText;
+      }
+    },
+
+    setBadgeBackgroundColor: function(tabId, color) {
+      if (tabId) {
+        this.tabBadgeBackgroundColor[tabId] = color;
+      }
+      else {
+        this.badgeBackgroundColor = color;
+      }
+      this.updateIcon({});
+    },
+
+    setBadgeText: function(tabId, text) {
+      if (tabId) {
+        this.tabBadgeText[tabId] = text;
+      }
+      else {
+        this.badgeText = text;
+      }
+      this.updateIcon({});
     }
   };
 
@@ -195,12 +319,12 @@
   var BrowserActionAPI = function() {
   };
 
-  BrowserActionAPI.prototype.getBadgeBackgroundColor = function() {
-    throw new Error('Unsupported method');
+  BrowserActionAPI.prototype.getBadgeBackgroundColor = function(details, callback) {
+    callback(BrowserActionService.getBadgeBackgroundColor(details.tabId));
   };
 
-  BrowserActionAPI.prototype.getBadgeText = function() {
-    throw new Error('Unsupported method');
+  BrowserActionAPI.prototype.getBadgeText = function(details, callback) {
+    callback(BrowserActionService.getBadgeText(details.tabId));
   };
 
   BrowserActionAPI.prototype.getPopup = function() {
@@ -211,14 +335,30 @@
     throw new Error('Unsupported method');
   };
 
-  BrowserActionAPI.prototype.setBadgeBackgroundColor = function() {
-    // TODO: Implement this
-    // throw new Error('Unsupported method');
+  BrowserActionAPI.prototype.setBadgeBackgroundColor = function(details) {
+    function colorToString(color) {
+      if ('string' === typeof(color)) {
+        if (/#[0-9A-F]{6}/i.exec(color)) {
+          return color;
+        }
+      } else if (Array.isArray(color)){
+        if (color.length === 3) {
+          var str = '#';
+          for (var i = 0; i < 3; ++i) {
+            var tmp = Math.max(0, Math.min(color[i], 255))
+            str += tmp.toString(16);
+          }
+          return str;
+        }
+      }
+      throw new Error('Unsupported color format');
+    }
+
+    BrowserActionService.setBadgeBackgroundColor(details.tabId, colorToString(details.color));
   };
 
-  BrowserActionAPI.prototype.setBadgeText = function() {
-    // TODO: Implement this
-    // throw new Error('Unsupported method');
+  BrowserActionAPI.prototype.setBadgeText = function(details) {
+    BrowserActionService.setBadgeText(details.tabId, details.text);
   };
 
   BrowserActionAPI.prototype.setPopup = function() {
@@ -230,12 +370,7 @@
   };
 
   BrowserActionAPI.prototype.setIcon = function(details) {
-    if (details && details.path) {
-      this.currentIcon = details.path;
-    } else {
-      // TODO: Support other properties for setIcon.
-    }
-    BrowserActionService.updateIcon();
+    BrowserActionService.updateIcon(details);
   };
 
 

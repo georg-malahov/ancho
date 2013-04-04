@@ -5,53 +5,20 @@
 
   const BROWSER_WINDOW_TYPE = 'navigator:browser';
 
-  var Event = function() {
-    this.callbacks = [];
-  };
-  Event.prototype.addListener = function(callback) {
-    this.callbacks.push(callback);
-    return this;
-  };
-
-  Event.prototype.removeListener = function(callback) {
-
-    var index = this.callbacks.indexOf(callback);
-    if (index >= 0) {
-      this.callbacks.splice(index, 1);
-    }
-    return this;
-  };
-
-  Event.prototype.clearListeners = function() {
-    this.callbacks = [];
-    return this;
-  };
-
-  Event.prototype.hasListeners = function() {
-    return this.callbacks.length > 0;
-  };
-
-  Event.prototype.fire = function() {
-    var args = arguments;
-    var results = [];
-    for ( var i = 0; i < this.callbacks.length; i++) {
-      var callback = this.callbacks[i];
-      if (callback) {
-        var result = callback.apply(callback, args);
-        results.push(result);
-      }
-    }
-    return results;
-  };
-
   function _isBrowserWindow(browserWindow) {
     return BROWSER_WINDOW_TYPE === browserWindow.document.documentElement.getAttribute('windowtype');
   }
 
   var WindowWatcherImpl = function() {
-    this.loaders = new Event();
-    this.unloaders = new Event();
+    this.registry = [];
     this.notificationListener = null;
+  };
+
+  WindowWatcherImpl.prototype.fire = function(isLoad, win) {
+    for (var i=0; i<this.registry.length; i++) {
+      var callback = isLoad ? this.registry[i].loader : this.registry[i].unloader;
+      callback.call(callback, browserWindow, this.registry[i].context)
+    }
   };
 
   WindowWatcherImpl.prototype.unload = function() {
@@ -60,10 +27,8 @@
       this.notificationListener = null;
     }
     this.forAllWindows(function(browserWindow) {
-      this.unloaders.fire(browserWindow);
+      this.fire(false, browserWindow);
     });
-    this.loaders = new Event();
-    this.unloaders = new Event();
   };
 
   WindowWatcherImpl.prototype.load = function() {
@@ -72,19 +37,19 @@
       this.notificationListener = function(browserWindow, topic) {
         if (topic === "domwindowopened") {
           if ('complete' === browserWindow.document.readyState && _isBrowserWindow(browserWindow)) {
-            self.loaders.fire(browserWindow);
+            self.fire(true, browserWindow);
           } else {
             browserWindow.addEventListener('load', function() {
               browserWindow.removeEventListener('load', arguments.callee, false);
               if (_isBrowserWindow(browserWindow)) {
-                self.loaders.fire(browserWindow);
+                self.fire(true, browserWindow);
               }
             });
           }
         }
         if (topic === "domwindowclosed") {
           if (_isBrowserWindow(browserWindow)) {
-            self.unloaders.fire(browserWindow);
+            self.fire(false, browserWindow);
           }
         }
       };
@@ -92,9 +57,12 @@
     }
   };
 
-  WindowWatcherImpl.prototype.register = function(loader, unloader) {
-    this.loaders.addListener(loader);
-    this.unloaders.addListener(unloader);
+  WindowWatcherImpl.prototype.register = function(loader, unloader, context) {
+    this.registry.push({
+      loader: loader,
+      unloader: unloader,
+      context: context
+    });
 
     // start listening of browser window open/close events
     this.load();
