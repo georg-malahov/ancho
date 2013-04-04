@@ -219,7 +219,7 @@ private:
   HWND winIdToHWND(INT aWinId)
   { return reinterpret_cast<HWND>(aWinId); }
 
-
+public:
   class ATabCreatedCallback: public ACommand
   {
   public:
@@ -237,7 +237,6 @@ private:
   class WindowCreatedCallback;
 
   typedef std::map<int, ATabCreatedCallback::Ptr> CreateTabCallbackMap;
-
 
   HRESULT createTabImpl(CIDispatchHelper &aProperties, ATabCreatedCallback::Ptr aCallback, bool aInNewWindow);
   HRESULT createWindowImpl(CIDispatchHelper &aProperties, ATabCreatedCallback::Ptr aCallback);

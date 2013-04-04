@@ -222,17 +222,19 @@ STDMETHODIMP_(void) CAnchoRuntime::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VA
     CComPtr<IDispatch> tmp;
     pWebBrowser->get_Document(&tmp);
     CComQIPtr<IHTMLDocument2> doc = tmp;
-    CComQIPtr<IOleWindow> docWin = doc;
-    HWND docWinHWND = NULL;
-    if (docWin) {
-      docWin->GetWindow(&docWinHWND);
-    }
-    if (docWinHWND) {
-      gWindowDocumentMap.put(WindowDocumentRecord(docWinHWND, m_TabID, m_pWebBrowser, pWebBrowser, doc));
-    }
-    HWND tabWindow = getTabWindow();
-    if (tabWindow) {
-      gWindowDocumentMap.put(WindowDocumentRecord(tabWindow, m_TabID, m_pWebBrowser, pWebBrowser, doc));
+    if (doc) {
+      CComQIPtr<IOleWindow> docWin = doc;
+      HWND docWinHWND = NULL;
+      if (docWin) {
+        docWin->GetWindow(&docWinHWND);
+      }
+      if (docWinHWND) {
+        gWindowDocumentMap.put(WindowDocumentRecord(docWinHWND, m_TabID, m_pWebBrowser, pWebBrowser, doc));
+      }
+      HWND tabWindow = getTabWindow();
+      if (tabWindow) {
+        gWindowDocumentMap.put(WindowDocumentRecord(tabWindow, m_TabID, m_pWebBrowser, pWebBrowser, doc));
+      }
     }
   }
 

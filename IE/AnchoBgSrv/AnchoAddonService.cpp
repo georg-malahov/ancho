@@ -519,7 +519,7 @@ STDMETHODIMP CAnchoAddonService::createPopupWindow(BSTR aUrl, INT aX, INT aY, LP
   injectedDataMap[s_AnchoBackgroundConsoleObjectName] = console;
 
   HWND hwnd = getCurrentWindowHWND();
-  IF_FAILED_RET(CPopupWindow::CreatePopupWindow(hwnd, injectedDataMap, aUrl, aX, aY, closeCallback));
+  IF_FAILED_RET(CPopupWindow::CreatePopupWindow(hwnd, this, injectedDataMap, aUrl, aX, aY, closeCallback));
   return S_OK;
 }
 
