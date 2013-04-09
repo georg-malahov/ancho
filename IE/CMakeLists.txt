@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 project (AnchoFramework)
 
 add_definitions(-DUNICODE -D_UNICODE)
+option(DISABLE_REGISTRATION "Disable registration" OFF)
 
 add_subdirectory(libbhohelper)
 include_directories(${libbhohelper_INC_DIR})
@@ -31,7 +32,7 @@ add_dependencies(AnchoBgSrv anchocommons Magpie libbhohelper libprothandlers Anc
 include_directories(${AnchoBgSrv_INC_DIR})
 
 add_subdirectory(ancho)
-add_dependencies(ancho anchocommons Magpie libbhohelper libprothandlers AnchoShared) #also dependent on AnchoBgSrv - but this will often cause needless rebuild
+add_dependencies(ancho anchocommons Magpie libbhohelper libprothandlers AnchoShared AnchoBgSrv) #also dependent on AnchoBgSrv - but this will often cause needless rebuild
 
 set_target_properties(Magpie PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${${PROJECT_NAME}_BINARY_DIR}/")
 set_target_properties(AnchoShared PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${${PROJECT_NAME}_BINARY_DIR}/")
