@@ -90,7 +90,7 @@ public:
     if (it != mNameToID.end()) {
       mProperties[it->second] = aValue;
     } else {
-      mNameToID[aName] = mProperties.size();
+      mNameToID[aName] = (DISPID)mProperties.size();
       mProperties.push_back(aValue);
     }
     return S_OK;

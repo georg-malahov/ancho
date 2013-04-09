@@ -399,7 +399,7 @@ STDMETHODIMP CAnchoBackgroundAPI::callFunction(LPDISPATCH aFunction, LPDISPATCH 
   VariantVector args;
 
   IF_FAILED_RET(addJSArrayToVariantVector(aArgs, args, true));
-  return function.InvokeN((DISPID)0, args.size()>0? &(args[0]): NULL, args.size(), aRet);
+  return function.InvokeN((DISPID)0, args.size()>0? &(args[0]): NULL, (int)args.size(), aRet);
 }
 
 //----------------------------------------------------------------------------
@@ -451,7 +451,7 @@ struct InvokeSelectedEventFunctor
   void operator()(CAnchoBackgroundAPI::EventObjectRecord &aRec) {
     if (aRec.instanceID == mSelectedInstance) {
       CComVariant result;
-      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, mArgs.size(), &result);
+      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, (int)mArgs.size(), &result);
       if (result.vt == VT_DISPATCH) {
         addJSArrayToVariantVector(result.pdispVal, mResults);
       }
@@ -470,7 +470,7 @@ struct InvokeUnselectedEventFunctor
   void operator()(CAnchoBackgroundAPI::EventObjectRecord &aRec) {
     if (aRec.instanceID != mSelectedInstance) {
       CComVariant result;
-      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, mArgs.size(), &result);
+      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, (int)mArgs.size(), &result);
       if (result.vt == VT_DISPATCH) {
         addJSArrayToVariantVector(result.pdispVal, mResults);
       }

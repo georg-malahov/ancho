@@ -241,7 +241,7 @@ HRESULT CIECookieManager::ParseCookieFile(LPCTSTR lpszFilename, CCookieArray & c
     return E_OUTOFMEMORY;
   }
 
-  size_t sLen = (size_t)(nLen & 0x00000000ffffffff);
+  DWORD sLen = (DWORD)(nLen & 0x00000000ffffffff);
   ParseBuffer buffer(sLen);
   IF_FAILED_RET(f.Read(buffer, sLen));
   hr = ParseCookies(buffer, sLen, cookies);

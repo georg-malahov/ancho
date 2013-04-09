@@ -148,10 +148,11 @@ add_custom_command(TARGET ${PROJECT_NAME}
                    )
 
 # Register DLL
-add_custom_command(TARGET ${PROJECT_NAME}
-                     POST_BUILD
-                     COMMAND "regsvr32" ARGS "/s" "\$(TargetPath)"
-                     )
+# TODO@Honza: Investigate if we need this - if not, remove
+# add_custom_command(TARGET ${PROJECT_NAME}
+#                      POST_BUILD
+#                      COMMAND "regsvr32" ARGS "/s" "\$(TargetPath)"
+#                      )
 
 # export variables
 set(${PROJECT_NAME}_INC_DIRS ${${PROJECT_NAME}_INC_DIRS} PARENT_SCOPE)

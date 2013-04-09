@@ -377,7 +377,7 @@ HRESULT CAnchoRuntime::fireOnBeforeRequest(const std::wstring &aUrl, const std::
     VARIANT tmp = {0}; HRESULT hr = result.Detach(&tmp);
     BEGIN_TRY_BLOCK
       aOutInfo.cancel = false;
-      for (size_t i = 0; i < arr.GetCount(); ++i) {
+      for (ULONG i = 0; i < arr.GetCount(); ++i) {
         JSValue item(arr.GetAt(i));
 
         JSValue cancel = item[L"cancel"];
@@ -419,7 +419,7 @@ HRESULT CAnchoRuntime::fireOnBeforeSendHeaders(const std::wstring &aUrl, const s
     //contained data already managed by CComSafeArray
     VARIANT tmp = {0}; HRESULT hr = result.Detach(&tmp);
     BEGIN_TRY_BLOCK
-      for (size_t i = 0; i < arr.GetCount(); ++i) {
+      for (ULONG i = 0; i < arr.GetCount(); ++i) {
         JSValue item(arr.GetAt(i));
         JSValue requestHeaders = item[L"requestHeaders"];
         if (!requestHeaders.isNull()) {
