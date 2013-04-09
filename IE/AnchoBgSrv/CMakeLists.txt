@@ -116,6 +116,11 @@ set_source_files_properties(
     GENERATED 1
   )
 
+set(MIDL_ENV_ARG win32)
+if (${CMAKE_CL_64})
+  set(MIDL_ENV_ARG win64)
+endif (${CMAKE_CL_64})
+
 # MIDL
 set(MIDL_ENV_ARG win32)
 if (${CMAKE_CL_64})

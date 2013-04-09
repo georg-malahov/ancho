@@ -194,6 +194,7 @@ public:
   // IAnchoAddonService methods. See .idl for description.
   STDMETHOD(GetAddonBackground)(BSTR bsID, IAnchoAddonBackground ** ppRet);
   STDMETHOD(GetModulePath)(BSTR * pbsPath);
+  STDMETHOD(getInternalProtocolParameters)(BSTR * aServiceHost, BSTR * aServicePath);
   STDMETHOD(registerRuntime)(INT aFrameTab, IAnchoRuntime * aRuntime, ULONG aHeartBeat, INT *aTabID);
   STDMETHOD(unregisterRuntime)(INT aTabID);
   STDMETHOD(createTabNotification)(INT aTabID, INT aRequestID);
@@ -218,7 +219,7 @@ private:
   HWND winIdToHWND(INT aWinId)
   { return reinterpret_cast<HWND>(aWinId); }
 
-
+public:
   class ATabCreatedCallback: public ACommand
   {
   public:
@@ -236,7 +237,6 @@ private:
   class WindowCreatedCallback;
 
   typedef std::map<int, ATabCreatedCallback::Ptr> CreateTabCallbackMap;
-
 
   HRESULT createTabImpl(CIDispatchHelper &aProperties, ATabCreatedCallback::Ptr aCallback, bool aInNewWindow);
   HRESULT createWindowImpl(CIDispatchHelper &aProperties, ATabCreatedCallback::Ptr aCallback);

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Toolbar.h"
+#include "ProtocolHandlerRegistrar.h"
 
 void CToolbar::GetBandInfoValues(const wchar_t *& title, POINTL &minSize)
 {
@@ -20,6 +21,12 @@ HRESULT CToolbar::InternalSetSite()
   ATLTRACE(L"ANCHO: toolbar InternalSetSite() - CoCreateInstace(CLSID_AnchoAddonService)\n");
   // create addon service object
   IF_FAILED_RET(mAnchoService.CoCreateInstance(CLSID_AnchoAddonService));
+
+  CComBSTR serviceHost, servicePath;
+  IF_FAILED_RET(mAnchoService->getInternalProtocolParameters(&serviceHost, &servicePath));
+  IF_FAILED_RET(CProtocolHandlerRegistrar::
+    RegisterTemporaryResourceHandler(s_AnchoInternalProtocolHandlerScheme, serviceHost, servicePath));
+
   CComBSTR url;
   mAnchoService->registerBrowserActionToolbar((INT)frameTab, &url, &mTabId);
   mUrl = std::wstring(url);

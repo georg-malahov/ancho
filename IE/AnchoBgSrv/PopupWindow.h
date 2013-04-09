@@ -2,6 +2,7 @@
 
 #include <exdispid.h>
 
+class CAnchoAddonService;
 
 class CPopupWindow;
 typedef CComObject<CPopupWindow>  CPopupWindowComObject;
@@ -14,6 +15,7 @@ class CPopupWindow :
   public PopupWebBrowserEvents
 {
 public:
+  friend struct OnClickFunctor;
   static const unsigned defaultWidth = 2;
   static const unsigned defaultHeight = 2;
   DECLARE_FRAME_WND_CLASS(NULL, IDR_MAINFRAME)
@@ -39,7 +41,7 @@ public:
   HRESULT FinalConstruct();
   void FinalRelease();
 
-  static HRESULT CreatePopupWindow(HWND aParent, const DispatchMap &aInjectedObjects, LPCWSTR aURL, int aX, int aY, CIDispatchHelper aCloseCallback);
+  static HRESULT CreatePopupWindow(HWND aParent, CAnchoAddonService *aService, const DispatchMap &aInjectedObjects, LPCWSTR aURL, int aX, int aY, CIDispatchHelper aCloseCallback);
 
   LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
   LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -51,12 +53,14 @@ public:
 private:
   CComPtr<IHTMLElement> getBodyElement();
 
-  CComQIPtr<IWebBrowser2>   m_pWebBrowser;     // Embedded WebBrowserControl
-  DispatchMap m_InjectedObjects;
-  CStringW    m_sURL;
-  DWORD       m_WebBrowserEventsCookie;
-  CIDispatchHelper m_CloseCallback;
+  CComQIPtr<IWebBrowser2>   mWebBrowser;     // Embedded WebBrowserControl
+  DispatchMap mInjectedObjects;
+  CStringW    mURL;
+  DWORD       mWebBrowserEventsCookie;
+  CIDispatchHelper mCloseCallback;
+  CAnchoAddonService *mService;
 
-  CComVariant mEventHandler;
+  CComVariant mResizeEventHandler;
+  CComVariant mOnClickEventHandler;
 };
 
