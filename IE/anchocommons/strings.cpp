@@ -30,6 +30,10 @@ const wchar_t * s_AnchoProtocolHandlerScheme =
 const wchar_t * s_AnchoProtocolHandlerPrefix =
   L"chrome-extension://";
 
+// scheme name for ancho internal protocol handler
+const wchar_t * s_AnchoInternalProtocolHandlerScheme =
+    L"ancho-internal";
+
 // JS object name of the API in background scripts
 const wchar_t * s_AnchoGlobalAPIObjectName =
     L"addonAPI";

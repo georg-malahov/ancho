@@ -11,6 +11,7 @@ var validationError = {
     'MISSING_PROPERTY' : 6,
     'NOT_NULL' : 7
   };
+//-----------------------------------------------------------------------------
 
 //Used when value can be of more than one type -
 //does checking for all types and succeeds when at least one succeeds.
@@ -44,7 +45,8 @@ var MultiTypeValidator = function(aSpec, aNamespace) {
     return validationReport;
   }
 }
-
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 function createValidationReportSuccess(){
   return { 'success': true, 'error' : null, 'errorCode' : validationError.OK };
 }
@@ -61,7 +63,17 @@ function simpleTypeValidation(aTypename, aArg) {
     return createValidationReportError(e, validationError.DIFFERENT_TYPE);
   }
 }
-//--------------------------------------------
+
+function simpleTypeValidatedCopy(aTypename, aArg) {
+  var report = simpleTypeValidation(aTypename, aArg);
+  if (!report.success) {
+    throw new Error(report.error);
+  }
+  return aArg;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Manages all validators
 var ValidatorManager = function() {
 
@@ -145,11 +157,14 @@ var ValidatorManager = function() {
   this.addValidator('any', function() {
     this.validate = function(aArg) {
       if (aArg === null || aArg === undefined) {
-        var e = "Specified object is not \'null\'";
+        var e = "Specified object is \'null\' or \'undefined\'";
         return createValidationReportError(e, validationError.INVALID_VALUE);
       } else {
         return createValidationReportSuccess();
       }
+    }
+    this.validatedCopy = function(aArg) {
+      return utils.strippedCopy(aArg);
     }
   });
 
@@ -157,11 +172,17 @@ var ValidatorManager = function() {
     this.validate = function(aArg) {
       return simpleTypeValidation('number', aArg);
     }
+    this.validatedCopy = function(aArg) {
+      return simpleTypeValidatedCopy('number', aArg);
+    }
   });
 
   this.addValidator('string', function() {
     this.validate = function(aArg) {
       return simpleTypeValidation('string', aArg);
+    }
+    this.validatedCopy = function(aArg) {
+      return simpleTypeValidatedCopy('string', aArg);
     }
   });
 
@@ -169,11 +190,21 @@ var ValidatorManager = function() {
     this.validate = function(aArg) {
       return simpleTypeValidation('function', aArg);
     }
+    this.validatedCopy = function(aArg) {
+      var report = simpleTypeValidation('function', aArg);
+      if (!report.success) {
+        throw Error(report.error);
+      }
+      throw Error('Functions are not copyable');
+    }
   });
 
   this.addValidator('boolean', function() {
     this.validate = function(aArg) {
       return simpleTypeValidation('boolean', aArg);
+    }
+    this.validatedCopy = function(aArg) {
+      return simpleTypeValidatedCopy('boolean', aArg);
     }
   });
 
@@ -186,6 +217,13 @@ var ValidatorManager = function() {
         return createValidationReportError(e, validationError.NOT_NULL);
       }
     }
+    this.validatedCopy = function(aArg) {
+      var report = this.validate(aArg);
+      if (!report.success) {
+        throw Error(report.error);
+      }
+      return null;
+    }
   });
 
   this.addValidator('integer', function() {
@@ -196,6 +234,22 @@ var ValidatorManager = function() {
         var e = "Specified object \'" + aArg + "\'is not an \'integer\'";
         return createValidationReportError(e, validationError.DIFFERENT_TYPE);
       }
+    }
+    this.validatedCopy = function(aArg) {
+      var report = this.validate(aArg);
+      if (!report.success) {
+        throw Error(report.error);
+      }
+      return aArg;
+    }
+  });
+
+  this.addValidator('double', function() {
+    this.validate = function(aArg) {
+      return simpleTypeValidation('number', aArg);
+    }
+    this.validatedCopy = function(aArg) {
+      return simpleTypeValidatedCopy('number', aArg);
     }
   });
 
@@ -218,12 +272,21 @@ var ValidatorManager = function() {
       var e = "Value \'" + aArg + "\' is not allowed for enumerated string";
       return createValidationReportError(e, validationError.INVALID_VALUE);
     }
+
+    this.validatedCopy = function(aArg) {
+      var report = this.validate(aArg);
+      if (!report.success) {
+        throw Error(report.error);
+      }
+      return aArg;
+    }
   });
 }
 var validatorManager = new ValidatorManager();
 exports.validatorManager = validatorManager;
 
-
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 var FunctionArgumentsValidator = function(aSpecification, aNamespace) {
 
   var specification = aSpecification;
@@ -347,10 +410,12 @@ var FunctionArgumentsValidator = function(aSpecification, aNamespace) {
 }
 validatorManager.addValidator('functionArguments', FunctionArgumentsValidator);
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 var ObjectValidator = function(aSpec, aNamespace) {
   var specification = aSpec;
   var typeNamespace = aNamespace;
-  this.validate = function (aObject) {
+  this.validate = function(aObject) {
     var validationReport = createValidationReportSuccess();
 
     if (!utils.isObject(aObject)) {
@@ -374,7 +439,7 @@ var ObjectValidator = function(aSpec, aNamespace) {
           return createValidationReportError(e, validationError.DIFFERENT_TYPE);
         }
       } else {
-      if (propertySpecification.required) {
+        if (propertySpecification.required) {
           var e = 'Missing property \'' + i + '\'!';
           return createValidationReportError(e, validationError.MISSING_PROPERTY);
         }
@@ -382,9 +447,36 @@ var ObjectValidator = function(aSpec, aNamespace) {
     }
     return validationReport;
   }
+  this.validatedCopy = function(aObject) {
+    if (!utils.isObject(aObject)) {
+      throw Error('Object expected instead of :' + utils.typeName(aObject));
+    }
+    properties = (specification && specification.properties) || null;
+    if (!properties) {
+      //no properties specified - return empty object
+      return {};
+    }
+    var newObject = {};
+    for (var i in properties) {
+      property = aObject[i];
+      propertySpecification = properties[i];
+      if (property === undefined) {
+        if (propertySpecification.required) {
+          throw Error('Missing property \'' + i + '\'!');
+        } else {
+          continue;
+        }
+      }
+      validator = validatorManager.getValidator(propertySpecification, typeNamespace);
+      newObject[i] = validator.validatedCopy(property);
+    }
+    return newObject;
+  }
 }
 validatorManager.addValidator('object', ObjectValidator);
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 var ArrayValidator = function(aSpec, aNamespace) {
   var specification = aSpec;
   var typeNamespace = aNamespace;
@@ -409,6 +501,7 @@ var ArrayValidator = function(aSpec, aNamespace) {
       return validationReport;
     }
 
+    var argIdx = 0;
     for (var i = 0; i < specification.items.length; ++i) {
       var spec = specification.items[i];
       var validator = validatorManager.getValidator(spec, typeNamespace);
@@ -420,7 +513,7 @@ var ArrayValidator = function(aSpec, aNamespace) {
       } else {
         if (!spec.required) {
           //if optional argument passed as undefined we need to move to the next argument
-          if(aArguments[argIdx] === undefined) {
+          if (aArguments[argIdx] === undefined) {
             ++argIdx;
           }
         } else {
@@ -430,10 +523,47 @@ var ArrayValidator = function(aSpec, aNamespace) {
     }
     return validationReport;
   }
+  this.validatedCopy = function(aArray) {
+    if (!utils.isArray(aArray)) {
+      throw Error('Array expected instead of :' + utils.typeName(aObject));
+    }
+    var newArray = [];
+
+    if (utils.isArray(specification.items)) {
+      var argIdx = 0;
+      for (var i = 0; i < specification.items.length; ++i) {
+        var spec = specification.items[i];
+        var validator = validatorManager.getValidator(spec, typeNamespace);
+
+        if (aArguments[argIdx] === undefined && !spec.required) {
+              newArray.push(undefined);
+              ++argIdx;
+              continue;
+        }
+
+        newArray.push(validator.validatedCopy(aArray[argIdx]));
+      }
+      return newArray;
+    }
+
+    var validator;
+    if (!specification.items) {
+      //no type specification for items - copy them as 'any'
+      validator = validatorManager.getValidator('any');
+    } else {
+      var spec = specification.items;
+      var validator = validatorManager.getValidator(spec, typeNamespace);
+    }
+    for (var i = 0; i < aArray.length; ++i) {
+      newArray.push(validator.validatedCopy(aArray[i]));
+    }
+    return newArray;
+  }
 }
 validatorManager.addValidator('array', ArrayValidator);
 
-
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 var ImageDataValidator = function() {
   this.validate = function(aArg) {
     //TODO - implement properly
@@ -442,6 +572,8 @@ var ImageDataValidator = function() {
 };
 validatorManager.addValidator('imagedata', ImageDataValidator);
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //Validation procedure - throws an exception when validation error uccured.
 var preprocessArguments = function(aMethodName, aArguments, aNamespace) {
   var validator = null;
@@ -472,4 +604,15 @@ exports.notImplemented = function(aMethodName, aArguments, aNamespace) {
   }
   console.error(message);
   throw new Error(message);
+}
+
+exports.typeCheckedCopy = function(aArg, aTypeName, aNamespace) {
+  try {
+    validator = validatorManager.getValidator(aTypeName, aNamespace);
+  } catch (e) {
+    console.error('Cannot obtain right validator for :' + aTypeName + '\n\t' + e.message);
+    throw e;
+  }
+
+  return validator.validatedCopy(aArg);
 }

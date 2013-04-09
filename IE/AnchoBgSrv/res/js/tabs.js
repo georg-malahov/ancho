@@ -282,6 +282,8 @@ var Tabs = function(instanceID) {
     if (responseCallback) {
       var callbackWrapper = new CallbackWrapper(args.responseCallback);
       callback = callbackWrapper.callback;
+    } else {
+      callback = function() { /*dummy*/ }
     }
     ret = addonAPI.invokeEventObject(
             'extension.onMessage',

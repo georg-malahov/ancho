@@ -150,6 +150,724 @@ var types = [
   }
 ];
 
+//------------------------------------------------------------
+//          Event object types for chrome.webRequest
+//------------------------------------------------------------
+  var eventTypes = [
+  {
+    "id": "onBeforeRequest.details",
+    "properties": {
+      "error": {
+        "id": "error",
+        "required": false,
+        "type": "string"
+      },
+      "formData": {
+        "id": "formData",
+        "required": false,
+        "type": "object"
+      },
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "raw": {
+        "id": "raw",
+        "required": false,
+        "type": {
+          "items": "UploadData",
+          "type": "array"
+        }
+      },
+      "requestBody": {
+        "id": "requestBody",
+        "required": false,
+        "type": "object"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  },
+  {
+    "id": "onBeforeSendHeaders.details",
+    "properties": {
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "requestHeaders": {
+        "id": "requestHeaders",
+        "required": false,
+        "type": "HttpHeaders"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  },
+  {
+    "id": "onSendHeaders.details",
+    "properties": {
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "requestHeaders": {
+        "id": "requestHeaders",
+        "required": false,
+        "type": "HttpHeaders"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  },
+  {
+    "id": "onHeadersReceived.deails",
+    "properties": {
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "responseHeaders": {
+        "id": "responseHeaders",
+        "required": false,
+        "type": "HttpHeaders"
+      },
+      "statusLine": {
+        "id": "statusLine",
+        "required": false,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  },
+  {
+    "id": "onAuthRequired.details",
+    "properties": {
+      "challenger": {
+        "id": "challenger",
+        "required": true,
+        "type": "object"
+      },
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "host": {
+        "id": "host",
+        "required": true,
+        "type": "string"
+      },
+      "isProxy": {
+        "id": "isProxy",
+        "required": true,
+        "type": "boolean"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "port": {
+        "id": "port",
+        "required": true,
+        "type": "integer"
+      },
+      "realm": {
+        "id": "realm",
+        "required": false,
+        "type": "string"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "responseHeaders": {
+        "id": "responseHeaders",
+        "required": false,
+        "type": "HttpHeaders"
+      },
+      "scheme": {
+        "id": "scheme",
+        "required": true,
+        "type": "string"
+      },
+      "statusLine": {
+        "id": "statusLine",
+        "required": false,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  },
+  {
+    "id": "onResponseStarted.details",
+    "properties": {
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "fromCache": {
+        "id": "fromCache",
+        "required": true,
+        "type": "boolean"
+      },
+      "ip": {
+        "id": "ip",
+        "required": false,
+        "type": "string"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "responseHeaders": {
+        "id": "responseHeaders",
+        "required": false,
+        "type": "HttpHeaders"
+      },
+      "statusCode": {
+        "id": "statusCode",
+        "required": true,
+        "type": "integer"
+      },
+      "statusLine": {
+        "id": "statusLine",
+        "required": false,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  },
+  {
+    "id": "onBeforeRedirect.details",
+    "properties": {
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "fromCache": {
+        "id": "fromCache",
+        "required": true,
+        "type": "boolean"
+      },
+      "ip": {
+        "id": "ip",
+        "required": false,
+        "type": "string"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "redirectUrl": {
+        "id": "redirectUrl",
+        "required": true,
+        "type": "string"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "responseHeaders": {
+        "id": "responseHeaders",
+        "required": false,
+        "type": "HttpHeaders"
+      },
+      "statusCode": {
+        "id": "statusCode",
+        "required": true,
+        "type": "integer"
+      },
+      "statusLine": {
+        "id": "statusLine",
+        "required": false,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  },
+  {
+    "id": "onCompleted.details",
+    "properties": {
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "fromCache": {
+        "id": "fromCache",
+        "required": true,
+        "type": "boolean"
+      },
+      "ip": {
+        "id": "ip",
+        "required": false,
+        "type": "string"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "responseHeaders": {
+        "id": "responseHeaders",
+        "required": false,
+        "type": "HttpHeaders"
+      },
+      "statusCode": {
+        "id": "statusCode",
+        "required": true,
+        "type": "integer"
+      },
+      "statusLine": {
+        "id": "statusLine",
+        "required": false,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  },
+  {
+    "id": "onErrorOccurred.details",
+    "properties": {
+      "error": {
+        "id": "error",
+        "required": true,
+        "type": "string"
+      },
+      "frameId": {
+        "id": "frameId",
+        "required": true,
+        "type": "integer"
+      },
+      "fromCache": {
+        "id": "fromCache",
+        "required": true,
+        "type": "boolean"
+      },
+      "ip": {
+        "id": "ip",
+        "required": false,
+        "type": "string"
+      },
+      "method": {
+        "id": "method",
+        "required": true,
+        "type": "string"
+      },
+      "parentFrameId": {
+        "id": "parentFrameId",
+        "required": true,
+        "type": "integer"
+      },
+      "requestId": {
+        "id": "requestId",
+        "required": true,
+        "type": "string"
+      },
+      "tabId": {
+        "id": "tabId",
+        "required": true,
+        "type": "integer"
+      },
+      "timeStamp": {
+        "id": "timeStamp",
+        "required": true,
+        "type": "double"
+      },
+      "type": {
+        "id": "type",
+        "required": true,
+        "type": {
+          "enum": [
+            "main_frame",
+            "sub_frame",
+            "stylesheet",
+            "script",
+            "image",
+            "object",
+            "xmlhttprequest",
+            "other"
+          ],
+          "type": "enumerated string"
+        }
+      },
+      "url": {
+        "id": "url",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "required": true,
+    "type": "object"
+  }
+];
+
+
+
+
 var typeChecking = require("typeChecking.js");
 var validatorManager = typeChecking.validatorManager;
 
@@ -159,4 +877,8 @@ for (var i = 0; i < types.length; ++i) {
 
 for (var i = 0; i < methods.length; ++i) {
   validatorManager.addSpecValidatorWrapper(apiName + '.' + methods[i].id, methods[i]);
+}
+
+for (var i = 0; i < eventTypes.length; ++i) {
+  validatorManager.addSpecValidatorWrapper(apiName + '.' + eventTypes[i].id, eventTypes[i]);
 }

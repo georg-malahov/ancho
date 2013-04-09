@@ -80,6 +80,11 @@ STDMETHODIMP_(void) CHtmlPanel::BrowserNavigateCompleteEvent(IDispatch *pDisp, V
   }
 }
 
+STDMETHODIMP_(void) CHtmlPanel::BrowserProgressChange(LONG Progress, LONG ProgressMax)
+{
+  OnBrowserProgressChange(Progress, ProgressMax);
+}
+
 void CHtmlPanel::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VARIANT *pURL, VARIANT *Flags, VARIANT *TargetFrameName, VARIANT *PostData, VARIANT *Headers, BOOL *Cancel)
 {
 }
@@ -93,5 +98,9 @@ void CHtmlPanel::OnBrowserWindowClosing(VARIANT_BOOL IsChildWindow, VARIANT_BOOL
 }
 
 void CHtmlPanel::OnBrowserNavigateComplete(IDispatch *pDisp, VARIANT *URL)
+{
+}
+
+void CHtmlPanel::OnBrowserProgressChange(LONG Progress, LONG ProgressMax)
 {
 }

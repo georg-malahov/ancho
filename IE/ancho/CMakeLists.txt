@@ -31,6 +31,7 @@ set(${PROJECT_NAME}_HEADERS
   "${${PROJECT_NAME}_INC_DIR}/targetver.h"
   "${${PROJECT_NAME}_INC_DIR}/Toolbar.h"
   "${${PROJECT_NAME}_INC_DIR}/Toolbar.ipp"
+  "${${PROJECT_NAME}_INC_DIR}/WindowDocumentMap.h"
   )
 
 set(${PROJECT_NAME}_SOURCES 
@@ -99,14 +100,19 @@ set_source_files_properties(
     GENERATED 1
   )
 # MIDL
+set(MIDL_ENV_ARG win32)
+if (${CMAKE_CL_64})
+  set(MIDL_ENV_ARG win64)
+endif (${CMAKE_CL_64})
+
 set(${PROJECT_NAME}_MIDL_ARGUMENTS 
                      "${${PROJECT_NAME}_IDL_FILE}"
                      /D $<$<CONFIG:Debug>:"_DEBUG"> $<$<CONFIG:Release>:"NDEBUG">
                      /D "MODULES_HAVE_EXPORT_PROPERTY"
-                     /I ${AnchoBgSrv_GENERATED_FILES_DIR}
+                     /I "${AnchoBgSrv_GENERATED_FILES_DIR}"
                      /nologo
                      /char signed
-                     /env win32
+                     /env ${MIDL_ENV_ARG}
                      /Oicf
                      /tlb "${${PROJECT_NAME}_MIDL_TLB_FILE}"
                      /h "${${PROJECT_NAME}_MIDL_I_H_FILE}"

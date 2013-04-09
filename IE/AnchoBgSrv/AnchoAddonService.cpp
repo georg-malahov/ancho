@@ -519,7 +519,7 @@ STDMETHODIMP CAnchoAddonService::createPopupWindow(BSTR aUrl, INT aX, INT aY, LP
   injectedDataMap[s_AnchoBackgroundConsoleObjectName] = console;
 
   HWND hwnd = getCurrentWindowHWND();
-  IF_FAILED_RET(CPopupWindow::CreatePopupWindow(hwnd, injectedDataMap, aUrl, aX, aY, closeCallback));
+  IF_FAILED_RET(CPopupWindow::CreatePopupWindow(hwnd, this, injectedDataMap, aUrl, aX, aY, closeCallback));
   return S_OK;
 }
 
@@ -756,20 +756,39 @@ STDMETHODIMP CAnchoAddonService::webBrowserReady()
   m_WebBrowserPostInitTasks.autoExecuteAll();
   return S_OK;
 }
+//----------------------------------------------------------------------------
+//
+STDMETHODIMP CAnchoAddonService::getInternalProtocolParameters(BSTR * aServiceHost, BSTR * aServicePath)
+{
+  ENSURE_RETVAL(aServiceHost);
+  ENSURE_RETVAL(aServicePath);
 
+  CString serviceHost = L"AnchoBackgroundService";
+
+  WCHAR appPath[MAX_PATH] = {0};
+  if (!GetModuleFileNameW(NULL, appPath, _countof(appPath))) {
+    return E_FAIL;
+  }
+  CString servicePath(appPath);
+
+  *aServiceHost = serviceHost.AllocSysString();
+  *aServicePath = servicePath.AllocSysString();
+  return S_OK;
+}
 //----------------------------------------------------------------------------
 //
 STDMETHODIMP CAnchoAddonService::registerBrowserActionToolbar(INT aFrameTab, BSTR * aUrl, INT*aTabId)
 {
   ENSURE_RETVAL(aUrl);
+  ENSURE_RETVAL(aTabId);
 
   *aTabId = getFrameTabID(aFrameTab);
 
-  WCHAR   appPath[MAX_PATH] = {0};
-  GetModuleFileNameW(NULL, appPath, _countof(appPath));
+  /*WCHAR   appPath[MAX_PATH] = {0};
+  GetModuleFileNameW(NULL, appPath, _countof(appPath));*/
 
   CString url;
-  url.Format(L"res://%s/BROWSER_ACTION_TOOLBAR.HTML", appPath);
+  url.Format(L"%s://AnchoBackgroundService/BROWSER_ACTION_TOOLBAR.HTML", s_AnchoInternalProtocolHandlerScheme);
   *aUrl = url.AllocSysString();
   ATLTRACE(L"ANCHO SERVICE: registered browser action toolbar; tab: %d\n", *aTabId);
   return S_OK;

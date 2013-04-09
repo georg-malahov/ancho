@@ -14,6 +14,8 @@ var EventFactory = require("utils.js").EventFactory;
 require("extension_spec.js");
 var preprocessArguments = require("typeChecking.js").preprocessArguments;
 var notImplemented = require("typeChecking.js").notImplemented;
+var strippedCopy = require("utils.js").strippedCopy;
+
 
 var EVENT_LIST = ['onConnect',
                   'onConnectExternal',
@@ -95,14 +97,21 @@ var CallbackWrapper = function(responseCallback) {
   this.shouldInvokeCallback = true;
   this.callback = function() {
     return function() {
-    if (!self.shouldInvokeCallback) {
+      if (!self.shouldInvokeCallback) {
         return;
       }
       self.shouldInvokeCallback = false;
-        //Solves the 'Different array constructors' problem:
-        //apply cannot be called because if array was created in different script engine
-        //it fails comparison with array constructor
-        addonAPI.callFunction(responseCallback, arguments);
+
+      var processedArguments = [];
+      for (var i = 0; i < arguments.length; ++i) {
+        //passed objects are copied and stripped of their methods
+        processedArguments.push(strippedCopy(arguments[i]));
+      }
+
+      //Solves the 'Different array constructors' problem:
+      //apply cannot be called because if array was created in different script engine
+      //it fails comparison with array constructor
+      addonAPI.callFunction(responseCallback, arguments);
     }
   } ();
 }

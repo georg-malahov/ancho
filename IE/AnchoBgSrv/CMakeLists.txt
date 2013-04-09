@@ -43,7 +43,7 @@ set(${PROJECT_NAME}_HEADERS
   "${${PROJECT_NAME}_INC_DIR}/sqlite3.h"
   )
 
-set(${PROJECT_NAME}_SOURCES 
+set(${PROJECT_NAME}_SOURCES
   "${${PROJECT_NAME}_SRC_DIR}/AnchoAddonService.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/AnchoBackgroundAPI.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/AnchoBackground.cpp"
@@ -60,7 +60,7 @@ set(${PROJECT_NAME}_SOURCES
   "${${PROJECT_NAME}_SRC_DIR}/stdafx.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/StorageDatabase.cpp"
   )
-set(${PROJECT_NAME}_C_SOURCES 
+set(${PROJECT_NAME}_C_SOURCES
   "${${PROJECT_NAME}_SRC_DIR}/sqlite3.c"
   )
 
@@ -116,15 +116,25 @@ set_source_files_properties(
     GENERATED 1
   )
 
+set(MIDL_ENV_ARG win32)
+if (${CMAKE_CL_64})
+  set(MIDL_ENV_ARG win64)
+endif (${CMAKE_CL_64})
+
 # MIDL
-set(${PROJECT_NAME}_MIDL_ARGUMENTS 
+set(MIDL_ENV_ARG win32)
+if (${CMAKE_CL_64})
+  set(MIDL_ENV_ARG win64)
+endif (${CMAKE_CL_64})
+
+set(${PROJECT_NAME}_MIDL_ARGUMENTS
                      "${${PROJECT_NAME}_IDL_FILE}"
                      /D $<$<CONFIG:Debug>:"_DEBUG"> $<$<CONFIG:Release>:"NDEBUG">
                      /D "MODULES_HAVE_EXPORT_PROPERTY"
-                     /I ${AnchoBgSrv_GENERATED_FILES_DIR}
+                     /I "${AnchoBgSrv_GENERATED_FILES_DIR}"
                      /nologo
                      /char signed
-                     /env win32
+                     /env ${MIDL_ENV_ARG}
                      /Oicf
                      /tlb "${${PROJECT_NAME}_MIDL_TLB_FILE}"
                      /h "${${PROJECT_NAME}_MIDL_I_H_FILE}"
@@ -148,8 +158,8 @@ source_group("Resources" FILES ${${PROJECT_NAME}_RC_FILES})
 
 ################# MAIN TARGET SETUP #########################
 
-add_executable(${PROJECT_NAME} WIN32 
-  ${${PROJECT_NAME}_HEADERS} 
+add_executable(${PROJECT_NAME} WIN32
+  ${${PROJECT_NAME}_HEADERS}
   ${${PROJECT_NAME}_SOURCES}
   ${${PROJECT_NAME}_C_SOURCES}
   ${${PROJECT_NAME}_GENERATED_FILES}
@@ -163,6 +173,11 @@ target_link_libraries(${PROJECT_NAME} libbhohelper anchocommons libprothandlers 
 
 # set UNICODE
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_DEFINITIONS _UNICODE,UNICODE)
+
+# _WIN64
+if (${CMAKE_CL_64})
+  add_definitions(-DWIN64 -D_WIN64)
+endif (${CMAKE_CL_64})
 
 #Generating files in pre-build step
 add_custom_command(TARGET ${PROJECT_NAME}

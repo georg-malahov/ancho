@@ -72,7 +72,7 @@ HRESULT CAnchoBackgroundAPI::Init(LPCTSTR lpszThisPath, LPCTSTR lpszRootURL, BST
   IF_FAILED_RET(m_Magpie->AddFilesystemScriptLoader((LPWSTR)(LPCWSTR)sPath));
 
   // add a loder for scripts in this exe file
-  IF_FAILED_RET(m_Magpie->AddResourceScriptLoader((ULONG)_AtlModule.GetResourceInstance()));
+  IF_FAILED_RET(m_Magpie->AddResourceScriptLoader((HANDLE_PTR)_AtlModule.GetResourceInstance()));
 
 #ifndef ANCHO_DISABLE_LOGWINDOW
   // advise logger
@@ -285,7 +285,7 @@ HRESULT CAnchoBackgroundAPI::appendJSONFileToVariableAssignment(CString aFileNam
                      std::istreambuf_iterator<char>());
 
   CString code;
-  code.Format(L"%s = %s;", aVariableName, CA2W(loadedCode.c_str()));
+  code.Format(L"%s = %hs;", aVariableName, loadedCode.c_str());
 
   aCode += code;
   return S_OK;
@@ -399,7 +399,7 @@ STDMETHODIMP CAnchoBackgroundAPI::callFunction(LPDISPATCH aFunction, LPDISPATCH 
   VariantVector args;
 
   IF_FAILED_RET(addJSArrayToVariantVector(aArgs, args, true));
-  return function.InvokeN((DISPID)0, args.size()>0? &(args[0]): NULL, args.size(), aRet);
+  return function.InvokeN((DISPID)0, args.size()>0? &(args[0]): NULL, (int)args.size(), aRet);
 }
 
 //----------------------------------------------------------------------------
@@ -451,7 +451,7 @@ struct InvokeSelectedEventFunctor
   void operator()(CAnchoBackgroundAPI::EventObjectRecord &aRec) {
     if (aRec.instanceID == mSelectedInstance) {
       CComVariant result;
-      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, mArgs.size(), &result);
+      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, (int)mArgs.size(), &result);
       if (result.vt == VT_DISPATCH) {
         addJSArrayToVariantVector(result.pdispVal, mResults);
       }
@@ -470,7 +470,7 @@ struct InvokeUnselectedEventFunctor
   void operator()(CAnchoBackgroundAPI::EventObjectRecord &aRec) {
     if (aRec.instanceID != mSelectedInstance) {
       CComVariant result;
-      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, mArgs.size(), &result);
+      aRec.listener.InvokeN((DISPID)0, mArgs.size()>0? &(mArgs[0]): NULL, (int)mArgs.size(), &result);
       if (result.vt == VT_DISPATCH) {
         addJSArrayToVariantVector(result.pdispVal, mResults);
       }
@@ -530,7 +530,7 @@ STDMETHODIMP CAnchoBackgroundAPI::storageGet(BSTR aStorageType, BSTR aKey, VARIA
   try {
     getStorageInstance(aStorageType).getItem(std::wstring(aKey), value);
   } catch (StorageDatabase::EItemNotFound &) {
-    aValue->vt = VT_UNKNOWN;
+    aValue->vt = VT_EMPTY;
     return S_OK;
   }
 

@@ -39,8 +39,12 @@ exports.EventFactory = {
 //on objects from different script dispach instances
 
 exports.isFunction = function(aArg) {
-  return Object.prototype.toString.call(aArg) === '[object Function]'
-    || aArg.constructor.toString().match('function Function');
+  try {
+    return Object.prototype.toString.call(aArg) === '[object Function]'
+      || aArg.constructor.toString().match('function Function');
+  } catch (e) {
+    return false;
+  }
 }
 
 exports.isObject = function(aArg) {
@@ -134,4 +138,12 @@ exports.matchUrl = function(aUrl, aPattern) {
   regexp = new RegExp(regexp);
 
   return regexp.test(aUrl);
+}
+
+var JSON = require("JSON.js");
+
+//function which provides JSONable copy of the passed argument
+exports.strippedCopy = function(aArg) {
+  //TODO - implement more efficiently
+  return JSON.parse(JSON.stringify(aArg));
 }

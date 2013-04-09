@@ -13,8 +13,10 @@ var EventFactory = require("utils.js").EventFactory;
 require("webRequest_spec.js");
 var preprocessArguments = require("typeChecking.js").preprocessArguments;
 var notImplemented = require("typeChecking.js").notImplemented;
+var typeCheckedCopy = require("typeChecking.js").typeCheckedCopy;
 var matchUrl = require("utils.js").matchUrl;
 
+var JSON = require("JSON.js");
 /**
  * RequestFilterHandler - check if request fulfills specification of event handler
  * aFilter : chrome.webRequest.RequestFilter
@@ -49,7 +51,7 @@ function RequestFilterHandler(aFilter) {
     return true;
   }
 }
-
+var JSON = require("JSON.js");
 /**
  * WebRequestListenerRecord - webRequest specialization of event listener wrapper
  * takes additional arguments - filter and opt_extraInfoSpec
@@ -61,11 +63,12 @@ function WebRequestListenerRecord(/*eventName, callback, filter, opt_extraInfoSp
 
   this.callback = args.callback;
   this.invoke = function(details) {
-    if (!requestFilter.filter(details)) {
-      console.debug("Request event " + eventName + " was filtered out :" + details.url);
+    var checkedDetails = typeCheckedCopy(details, "chrome." + eventName + ".details");
+    if (!requestFilter.filter(checkedDetails)) {
+      //console.debug("Request event " + eventName + " was filtered out :" + checkedDetails.url);
       return;
     }
-    return addonAPI.callFunction(this.callback, arguments);
+    return addonAPI.callFunction(this.callback, [checkedDetails]); //TODO - type checking of returned value
   }
 };
 

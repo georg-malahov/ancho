@@ -51,7 +51,7 @@ void CHtmlToolbarWindow::OnBrowserBeforeNavigate2(LPDISPATCH pDisp, VARIANT *pUR
   if (hBrowserWnd && !::GetProp(hBrowserWnd, PROPPROC)) {
     // Subclass the window so we can handle the focus messages.
     WNDPROC fnOldWndProc =
-      (WNDPROC) ::SetWindowLongPtrW(hBrowserWnd, GWL_WNDPROC, (LONG_PTR) WindowProc);
+      (WNDPROC) ::SetWindowLongPtrW(hBrowserWnd, GWLP_WNDPROC, (LONG_PTR) WindowProc);
     ::SetProp(hBrowserWnd, PROPPROC, fnOldWndProc);
     ::SetProp(hBrowserWnd, PROPINST, this);
   }
@@ -80,9 +80,13 @@ void CHtmlToolbarWindow::OnBrowserDocumentComplete(LPDISPATCH pDispatch, VARIANT
   }
   CIDispatchHelper scriptDispatch = CIDispatchHelper::GetScriptDispatch(m_pWebBrowser);
   if (scriptDispatch) {
-    CComVariant idVariant = mTabId;
-    DISPPARAMS params = {&idVariant, NULL, 1, 0};
-    scriptDispatch.Call((LPOLESTR)L"initBrowserActionPage", &params);
+    CIDispatchHelper window;
+    scriptDispatch.Get<CIDispatchHelper, VT_DISPATCH, IDispatch*>(L"window", window);
+    if (window) {
+      CComVariant idVariant = mTabId;
+      DISPPARAMS params = {&idVariant, NULL, 1, 0};
+      window.Call((LPOLESTR)L"initBrowserActionPage", &params);
+    }
   }
 }
 

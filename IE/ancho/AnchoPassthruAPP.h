@@ -9,6 +9,8 @@
 #include "ProtocolImpl.h"
 #include "AnchoBrowserEvents.h"
 
+#include "WindowDocumentMap.h"
+
 #include <string>
 typedef std::basic_string<TCHAR> tstring;
 #include <set>
@@ -75,6 +77,7 @@ public:
   // Free the memory associated with the params allocated when calling Switch().
   void FreeSwitchParams(BSTR* params);
 
+  std::wstring getUrl()const { return m_Url; }
 private:
   // -------------------------------------------------------------------------
   // Implementation
@@ -171,12 +174,16 @@ public:
   STDMETHOD(fireOnBeforeHeaders)(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<IWebRequestReporter> aReporter);
 private:
 
-  STDMETHOD(getDocumentFromSink)(CComPtr<CAnchoProtocolSink> aSink, CComPtr<IHTMLDocument2> &aDoc);
-  STDMETHOD(getEventsFromSink)(CComPtr<CAnchoProtocolSink> aSink, const CComBSTR &aUrl, CComPtr<DAnchoBrowserEvents> &aEvents);
+  STDMETHOD(getDocumentWindowFromSink)(CComPtr<CAnchoProtocolSink> aSink, HWND &aWinHWND);
+  STDMETHOD(getEventsFromBrowser)(CComPtr<IWebBrowser2> aBrowser, CComPtr<DAnchoBrowserEvents> &aEvents);
+
   // -------------------------------------------------------------------------
   // Data members
   CComQIPtr<DAnchoBrowserEvents> m_BrowserEvents;
   CComPtr<IHTMLDocument2> m_Doc;
+
+  WindowDocumentRecord m_DocumentRecord;
+
   // It's hellish to figure out if we are refreshing the main frame (e.g. on F5).
   // So we use the URL to check (see implementation) and remember the state in this variable.
   bool m_IsRefreshingMainFrame;

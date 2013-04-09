@@ -13,7 +13,7 @@ set(${PROJECT_NAME}_HEADERS
   "${${PROJECT_NAME}_INC_DIR}/IPCHeartbeat.h"
   )
 
-set(${PROJECT_NAME}_SOURCES 
+set(${PROJECT_NAME}_SOURCES
   "${${PROJECT_NAME}_SRC_DIR}/strings.cpp"
   "${${PROJECT_NAME}_SRC_DIR}/utilities.cpp"
   )
@@ -22,6 +22,11 @@ add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_HEADERS} ${${PROJECT_NAME}_
 
 # set UNICODE
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_DEFINITIONS _UNICODE,UNICODE)
+
+# _WIN64
+if (${CMAKE_CL_64})
+  add_definitions(-DWIN64 -D_WIN64)
+endif (${CMAKE_CL_64})
 
 set(${PROJECT_NAME}_LIB_DIR "${${PROJECT_NAME}_BINARY_DIR}"  CACHE PATH "Path to ${PROJECT_NAME} lib directory")
 
