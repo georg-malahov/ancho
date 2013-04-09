@@ -188,10 +188,12 @@ add_custom_command(TARGET ${PROJECT_NAME}
 
 
 # Register service
-add_custom_command(TARGET ${PROJECT_NAME}
-                   POST_BUILD
-                   COMMAND "\$(TargetPath)" ARGS "/RegServer" "/s"
-                   )
+if (NOT ${DISABLE_REGISTRATION})
+  add_custom_command(TARGET ${PROJECT_NAME}
+                     POST_BUILD
+                     COMMAND "\$(TargetPath)" ARGS "/RegServer" "/s"
+                     )
+endif (NOT ${DISABLE_REGISTRATION})
 
 # export variables
 set(${PROJECT_NAME}_INC_DIRS ${${PROJECT_NAME}_INC_DIRS} PARENT_SCOPE)

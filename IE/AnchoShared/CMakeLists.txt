@@ -147,13 +147,6 @@ add_custom_command(TARGET ${PROJECT_NAME}
                    WORKING_DIRECTORY "${${PROJECT_NAME}_GENERATED_FILES_DIR}"
                    )
 
-# Register DLL
-# TODO@Honza: Investigate if we need this - if not, remove
-# add_custom_command(TARGET ${PROJECT_NAME}
-#                      POST_BUILD
-#                      COMMAND "regsvr32" ARGS "/s" "\$(TargetPath)"
-#                      )
-
 # export variables
 set(${PROJECT_NAME}_INC_DIRS ${${PROJECT_NAME}_INC_DIRS} PARENT_SCOPE)
 set(${PROJECT_NAME}_GENERATED_FILES_DIR ${${PROJECT_NAME}_GENERATED_FILES_DIR} PARENT_SCOPE)
