@@ -6,6 +6,96 @@
 
 #pragma once
 
+class DOMWindowWrapper;
+
+/*===========================================================================
+ * class HTMLLocationWrapper
+ *  Wraps window.location for the content scripts.
+ * @TODO: The wrapped location object is in fact also a IDispatcEx, but for
+ * now we don't sandbox it. So all expando properties are valid for the actual
+ * page, for content scripts, and, if you pass it to the background, also for
+ * background scripts.
+ * This _might_ be a security risk, but extending location is not very common
+ * and should anyway be avoided.
+ * However it is possible to pass data across addon boundaries using location.
+ * So this is subject to a later change.
+ */
+class ATL_NO_VTABLE HTMLLocationWrapper :
+  public CComObjectRootEx<CComSingleThreadModel>,
+  public IDispatchEx
+{
+public:
+  typedef CComObject<HTMLLocationWrapper> ComObject;
+  typedef CComPtr<ComObject> ComPtr;
+
+  static HRESULT createInstance(IHTMLWindow2 * aHTMLWindow,
+                                ComPtr & aRet);
+
+  // -------------------------------------------------------------------------
+  // COM interface map
+  BEGIN_COM_MAP(HTMLLocationWrapper)
+    COM_INTERFACE_ENTRY(IDispatch)
+    COM_INTERFACE_ENTRY(IDispatchEx)
+  END_COM_MAP()
+
+  // -------------------------------------------------------------------------
+  // COM standard methods
+  HRESULT FinalConstruct() {
+    return S_OK;
+  }
+
+  void FinalRelease() {
+    mLocation.Release();
+  }
+
+public:
+  // -------------------------------------------------------------------------
+  // IDispatch methods: forward
+#define FORWARD_CALL(_name, ...) \
+    { return (mLocation) ? mLocation->_name(__VA_ARGS__) : E_UNEXPECTED; }
+
+  STDMETHOD(GetTypeInfoCount)(UINT *pctinfo)
+      FORWARD_CALL(GetTypeInfoCount, pctinfo)
+  STDMETHOD(GetTypeInfo)(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo)
+      FORWARD_CALL(GetTypeInfo, iTInfo, lcid, ppTInfo)
+  STDMETHOD(GetIDsOfNames)(REFIID riid, LPOLESTR *rgszNames, UINT cNames,
+                                         LCID lcid, DISPID *rgDispId)
+      FORWARD_CALL(GetIDsOfNames, riid, rgszNames, cNames, lcid, rgDispId)
+  STDMETHOD(Invoke)(DISPID dispIdMember, REFIID riid, LCID lcid, WORD wFlags,
+                                  DISPPARAMS *pDispParams, VARIANT *pVarResult,
+                                  EXCEPINFO *pExcepInfo, UINT *puArgErr)
+      FORWARD_CALL(Invoke, dispIdMember, riid, lcid, wFlags, pDispParams,
+                    pVarResult, pExcepInfo, puArgErr)
+
+  // -------------------------------------------------------------------------
+  // IDispatchEx methods: forward
+  STDMETHOD(GetDispID)(BSTR bstrName, DWORD grfdex, DISPID *pid)
+      FORWARD_CALL(GetDispID, bstrName, grfdex, pid)
+  STDMETHOD(InvokeEx)(DISPID id, LCID lcid, WORD wFlags, DISPPARAMS *pdp,
+                      VARIANT *pvarRes, EXCEPINFO *pei,
+                      IServiceProvider *pspCaller)
+      // NOTE: Here happens the knack: we provide NULL for pspCaller, so
+      // the security check does not kick in.
+      FORWARD_CALL(InvokeEx, id, lcid, wFlags, pdp, pvarRes, pei, NULL)
+  STDMETHOD(DeleteMemberByName)(BSTR bstrName,DWORD grfdex)
+      FORWARD_CALL(DeleteMemberByName, bstrName, grfdex)
+  STDMETHOD(DeleteMemberByDispID)(DISPID id)
+      FORWARD_CALL(DeleteMemberByDispID, id)
+  STDMETHOD(GetMemberProperties)(DISPID id, DWORD grfdexFetch, DWORD *pgrfdex)
+      FORWARD_CALL(GetMemberProperties, id, grfdexFetch, pgrfdex)
+  STDMETHOD(GetMemberName)(DISPID id, BSTR *pbstrName)
+      FORWARD_CALL(GetMemberName, id, pbstrName)
+  STDMETHOD(GetNextDispID)(DWORD grfdex, DISPID id, DISPID *pid)
+      FORWARD_CALL(GetNextDispID, grfdex, id, pid)
+  STDMETHOD(GetNameSpaceParent)(IUnknown **ppunk)
+      FORWARD_CALL(GetNameSpaceParent, ppunk)
+#undef FORWARD_CALL
+
+private:
+  // the original IHTMLLocation object
+  CComPtr<IDispatchEx> mLocation;
+};
+
 /*===========================================================================
  * class DOMWindowWrapper
  *  Wraps a DOM window for the content scripts.
@@ -43,18 +133,21 @@ public:
 public:
   // -------------------------------------------------------------------------
   // IDispatch methods: simply forward
-  __forceinline STDMETHOD(GetTypeInfoCount)(UINT *pctinfo)
-    { return mDOMWindowInterfaces.dispEx->GetTypeInfoCount(pctinfo); }
-  __forceinline STDMETHOD(GetTypeInfo)(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo)
-    { return mDOMWindowInterfaces.dispEx->GetTypeInfo(iTInfo, lcid, ppTInfo); }
-  __forceinline STDMETHOD(GetIDsOfNames)(REFIID riid, LPOLESTR *rgszNames, UINT cNames,
+#define FORWARD_CALL(_name, ...) \
+    { return (mDOMWindowInterfaces.dispEx) ? mDOMWindowInterfaces.dispEx->_name(__VA_ARGS__) : E_UNEXPECTED; }
+  STDMETHOD(GetTypeInfoCount)(UINT *pctinfo)
+      FORWARD_CALL(GetTypeInfoCount, pctinfo)
+  STDMETHOD(GetTypeInfo)(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo)
+      FORWARD_CALL(GetTypeInfo, iTInfo, lcid, ppTInfo)
+  STDMETHOD(GetIDsOfNames)(REFIID riid, LPOLESTR *rgszNames, UINT cNames,
                                          LCID lcid, DISPID *rgDispId)
-    { return mDOMWindowInterfaces.dispEx->GetIDsOfNames(riid, rgszNames, cNames, lcid, rgDispId); }
-  __forceinline STDMETHOD(Invoke)(DISPID dispIdMember, REFIID riid, LCID lcid, WORD wFlags,
+      FORWARD_CALL(GetIDsOfNames, riid, rgszNames, cNames, lcid, rgDispId)
+  STDMETHOD(Invoke)(DISPID dispIdMember, REFIID riid, LCID lcid, WORD wFlags,
                                   DISPPARAMS *pDispParams, VARIANT *pVarResult,
                                   EXCEPINFO *pExcepInfo, UINT *puArgErr)
-    { return mDOMWindowInterfaces.dispEx->Invoke(dispIdMember, riid, lcid, wFlags, pDispParams,
-                                pVarResult, pExcepInfo, puArgErr); }
+      FORWARD_CALL(Invoke, dispIdMember, riid, lcid, wFlags, pDispParams,
+                    pVarResult, pExcepInfo, puArgErr)
+#undef FORWARD_CALL
 
   // -------------------------------------------------------------------------
   // IDispatchEx methods
@@ -153,7 +246,9 @@ private:
     DISPID_ONERROR        = -2147412083,
     DISPID_ONHELP         = -2147412099,
     DISPID_ONBEFOREPRINT  = -2147412046,
-    DISPID_ONFOCUS        = -2147412098
+    DISPID_ONFOCUS        = -2147412098,
+    // also there is the DISPID for window.location
+    DISPID_LOCATION       = 14
   };
 
   // the original DOM window
@@ -169,4 +264,7 @@ private:
   // Event properties. We can't store them in the expando property map
   // because this will mess up GetNextDispID.
   MapDISPIDToCComVariant  mDOMEventProperties;
+
+  // Wrapper for window.location
+  HTMLLocationWrapper::ComPtr mLocation;
 };

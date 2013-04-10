@@ -34,6 +34,9 @@ BOOL WINAPI CAnchoModule::DllMain(DWORD dwReason, LPVOID lpReserved) {
       pInternetSession->UnregisterNameSpace(m_CFHTTP, L"http");
       pInternetSession->UnregisterNameSpace(m_CFHTTPS, L"https");
     }
+    //@TODO: Better release m_CFHTTP and m_CFHTTPS here explicitly.
+    // "this" (_AtlModule) is a static object and should be clean
+    // when DLLMain returns.
   }
 
   return CAtlDllModuleT<CAnchoModule>::DllMain(dwReason, lpReserved);
