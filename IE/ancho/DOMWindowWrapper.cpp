@@ -18,7 +18,7 @@ HRESULT HTMLLocationWrapper::createInstance(IHTMLWindow2 * aHTMLWindow,
   }
   CComPtr<IHTMLLocation> htmlLocation;
   IF_FAILED_RET(aHTMLWindow->get_location(&htmlLocation.p));
-  
+
   ComObject * locationObject = NULL;
   IF_FAILED_RET(ComObject::CreateInstance(&locationObject));
   ComPtr ptr = locationObject;
