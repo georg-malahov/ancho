@@ -99,7 +99,7 @@ HRESULT CIECookieManager::ParseCookies(ParseBuffer & parseBuffer, size_t sLen, C
 HRESULT CIECookieManager::ReadCookieFile(LPCWSTR url, CCookieArray & cookies) {
   LPINTERNET_CACHE_ENTRY_INFO info;
   DWORD MAX_CACHE_ENTRY_INFO_SIZE = 10 * 4096;
-  info = (LPINTERNET_CACHE_ENTRY_INFO)malloc(MAX_CACHE_ENTRY_INFO_SIZE);
+  info = (LPINTERNET_CACHE_ENTRY_INFO) new char[MAX_CACHE_ENTRY_INFO_SIZE];
   HANDLE streamHandle;
   streamHandle = RetrieveUrlCacheEntryStream(url, info, &MAX_CACHE_ENTRY_INFO_SIZE, false, 0);
   HRESULT hr;
@@ -108,8 +108,8 @@ HRESULT CIECookieManager::ReadCookieFile(LPCWSTR url, CCookieArray & cookies) {
     ATLTRACE(_T("Cannot open cache entry stream. Error: %d; url: %ws\n"), hr, url);
   } else {
     DWORD dwStreamSize = info->dwSizeLow;
-    char data[4096];
-    if (!ReadUrlCacheEntryStream(streamHandle, 0, &data, &dwStreamSize, 0)) {
+    char *data = new char[dwStreamSize+1];
+    if (!ReadUrlCacheEntryStream(streamHandle, 0, data, &dwStreamSize, 0)) {
       hr = GetLastError();
       ATLTRACE(_T("Cannot read cache entry stream. Error: %d\n"), hr);
     } else {
@@ -118,8 +118,9 @@ HRESULT CIECookieManager::ReadCookieFile(LPCWSTR url, CCookieArray & cookies) {
       ParseBuffer parserBuffer(dwStreamSize, data);
       hr = ParseCookies(parserBuffer, dwStreamSize, cookies);
     }
+    delete [] data;
   }
-  delete info;
+  delete [] (char*)info;
   return hr;
 }
 
@@ -341,7 +342,7 @@ STDMETHODIMP CIECookieManager::getCookie(BSTR aUrl, BSTR aName, VARIANT *aData)
   DWORD size = 0;
   if (!InternetGetCookie(aUrl, aName, NULL, &size)){
     HRESULT hr = GetLastError();
-    ATLTRACE(_T("Could not set cookie. Error: %d : %s\n"), hr, lastErrorMessage(hr));
+    ATLTRACE(_T("Could not get cookie. Error: %d : %s\n"), hr, lastErrorMessage(hr));
     return hr;
   }
   CString data;
@@ -350,7 +351,7 @@ STDMETHODIMP CIECookieManager::getCookie(BSTR aUrl, BSTR aName, VARIANT *aData)
   if (!InternetGetCookie(aUrl, aName, buffer, &size)){
     data.ReleaseBuffer();
     HRESULT hr = GetLastError();
-    ATLTRACE(_T("Could not set cookie. Error: %d : %s\n"), hr, lastErrorMessage(hr));
+    ATLTRACE(_T("Could not get cookie. Error: %d : %s\n"), hr, lastErrorMessage(hr));
     SysFreeString(aData->bstrVal);
     return hr;
   }
