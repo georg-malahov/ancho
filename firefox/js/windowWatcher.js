@@ -17,7 +17,7 @@
   WindowWatcherImpl.prototype.fire = function(isLoad, win) {
     for (var i=0; i<this.registry.length; i++) {
       var callback = isLoad ? this.registry[i].loader : this.registry[i].unloader;
-      callback.call(callback, browserWindow, this.registry[i].context)
+      callback.call(callback, win, this.registry[i].context)
     }
   };
 
@@ -58,6 +58,7 @@
   };
 
   WindowWatcherImpl.prototype.register = function(loader, unloader, context) {
+    context = context || {};
     this.registry.push({
       loader: loader,
       unloader: unloader,
@@ -71,12 +72,12 @@
     this.forAllWindows(function(browserWindow) {
       if ('complete' === browserWindow.document.readyState) {
         // Document is fully loaded so we can watch immediately.
-        loader(browserWindow);
+        loader(browserWindow, context);
       } else {
         // Wait for the window to load before watching.
         browserWindow.addEventListener('load', function() {
           browserWindow.removeEventListener('load', arguments.callee, false);
-          loader(browserWindow);
+          loader(browserWindow, context);
         });
       }
     });
