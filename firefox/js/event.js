@@ -3,10 +3,9 @@
   function Event(window, tabId, state, type) {
     var listeners = [];
 
-    window.addEventListener('unload', function(event) {
-      window.removeEventListener('unload', arguments.callee, false);
+    state.registerUnloader(window, function() {
       state.eventDispatcher.removeListener(type, notifyListeners);
-    }, false);
+    });
 
     function notifyListeners(targetTab, params) {
       var results = [];

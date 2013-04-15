@@ -19,6 +19,10 @@
     this._tab = Utils.getWindowId(window);
     this.onChanged = new Event(window, this._tab, this._state, 'cookie.changed');
     Services.obs.addObserver(this, COOKIE_CHANGED, false);
+    var self = this;
+    state.registerUnloader(window, function() {
+      Services.obs.removeObserver(self, COOKIE_CHANGED, false);
+    });
   };
 
   CookiesAPI.prototype.observe = function(subject, topic, data) {
