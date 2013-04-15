@@ -11,73 +11,71 @@
 
   var WindowWatcherImpl = function() {
     this.registry = [];
-    this.notificationListener = null;
+  };
+
+  WindowWatcherImpl.prototype.getContext = function(entry, win, remove) {
+    for (var i=0; i<entry.contexts.length; i++) {
+      if (win === entry.contexts[i].window) {
+        var context = entry.contexts[i].context;
+        if (remove) {
+          entry.contexts.splice(i, 1);
+        }
+        return context;
+      }
+    }
+
+    // This entry doesn't have a context yet for the specified window.
+    var context = {};
+    if (!remove) {
+      entry.contexts.push({ window: win, context: context });
+    }
+    else {
+      // TODO: Log failure to find context.
+    }
+    return context;
   };
 
   WindowWatcherImpl.prototype.fire = function(isLoad, win) {
     for (var i=0; i<this.registry.length; i++) {
       var callback = isLoad ? this.registry[i].loader : this.registry[i].unloader;
-      callback.call(callback, win, this.registry[i].context)
+      callback.call(callback, win, this.getContext(this.registry[i], win, !isLoad));
     }
   };
 
   WindowWatcherImpl.prototype.unload = function() {
-    if (this.notificationListener != null) {
-      Services.ww.unregisterNotification(this.notificationListener);
-      this.notificationListener = null;
-    }
+    Services.ww.unregisterNotification(this);
     this.forAllWindows(function(browserWindow) {
       this.fire(false, browserWindow);
     });
+    this.registry = [];
   };
 
   WindowWatcherImpl.prototype.load = function() {
-    if (this.notificationListener == null) {
-      var self = this;
-      this.notificationListener = function(browserWindow, topic) {
-        if (topic === "domwindowopened") {
-          if ('complete' === browserWindow.document.readyState && _isBrowserWindow(browserWindow)) {
-            self.fire(true, browserWindow);
-          } else {
-            browserWindow.addEventListener('load', function() {
-              browserWindow.removeEventListener('load', arguments.callee, false);
-              if (_isBrowserWindow(browserWindow)) {
-                self.fire(true, browserWindow);
-              }
-            });
-          }
-        }
-        if (topic === "domwindowclosed") {
-          if (_isBrowserWindow(browserWindow)) {
-            self.fire(false, browserWindow);
-          }
-        }
-      };
-      Services.ww.registerNotification(this.notificationListener);
-    }
+    Services.ww.registerNotification(this);
   };
 
-  WindowWatcherImpl.prototype.register = function(loader, unloader, context) {
-    context = context || {};
-    this.registry.push({
+  WindowWatcherImpl.prototype.register = function(loader, unloader) {
+    var entry = {
       loader: loader,
       unloader: unloader,
-      context: context
-    });
+      contexts: []
+    };
+    this.registry.push(entry);
 
     // start listening of browser window open/close events
     this.load();
 
     // go through open windows and call loader there
+    var self = this;
     this.forAllWindows(function(browserWindow) {
       if ('complete' === browserWindow.document.readyState) {
         // Document is fully loaded so we can watch immediately.
-        loader(browserWindow, context);
+        loader(browserWindow, self.getContext(entry, browserWindow));
       } else {
         // Wait for the window to load before watching.
         browserWindow.addEventListener('load', function() {
           browserWindow.removeEventListener('load', arguments.callee, false);
-          loader(browserWindow, context);
+          loader(browserWindow, self.getContext(entry, browserWindow));
         });
       }
     });
@@ -98,6 +96,28 @@
 
   WindowWatcherImpl.prototype.isActiveTab = function(browserWindow, tab) {
     return browserWindow.gBrowser.selectedTab === tab;
+  };
+
+  WindowWatcherImpl.prototype.observe = function(subject, topic, data) {
+    var browserWindow = subject;
+    if (topic === "domwindowopened") {
+      if ('complete' === browserWindow.document.readyState && _isBrowserWindow(browserWindow)) {
+        this.fire(true, browserWindow);
+      } else {
+        var self = this;
+        browserWindow.addEventListener('load', function() {
+          browserWindow.removeEventListener('load', arguments.callee, false);
+          if (_isBrowserWindow(browserWindow)) {
+            self.fire(true, browserWindow);
+          }
+        });
+      }
+    }
+    if (topic === "domwindowclosed") {
+      if (_isBrowserWindow(browserWindow)) {
+        this.fire(false, browserWindow);
+      }
+    }
   };
 
   module.exports = new WindowWatcherImpl();
