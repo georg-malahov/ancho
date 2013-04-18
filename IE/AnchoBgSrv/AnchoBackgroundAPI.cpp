@@ -501,7 +501,7 @@ StorageDatabase & CAnchoBackgroundAPI::getStorageInstance(const std::wstring &aS
 
   if (!mStorageLocalDb.isOpened()) {
     std::wstring path = getSystemPathWithFallback(FOLDERID_LocalAppDataLow, CSIDL_LOCAL_APPDATA);
-    path += L"Salsita";
+    path += L"\\Salsita";
 
     if (!PathIsDirectory(path.c_str())) {
       ATLTRACE(L"Creating directory: %s\n", path.c_str());
