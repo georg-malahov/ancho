@@ -31,23 +31,27 @@
 
   exports.applyContentScripts = function(win, spec) {
     var baseUrl = Services.io.newURI(spec, '', null);
+    var principal;
+    // Preserving backwards compatibility with FF18 and older.
+    if (Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo).version.split('.')[0] >= 19) {
+      principal = CC('@mozilla.org/systemprincipal;1', 'nsIPrincipal')();
+    }
+    else {
+      principal = ExtensionState.backgroundWindow;
+    }
+    var sandbox = Cu.Sandbox(principal, { sandboxPrototype: win });
+    // Destroy the sandbox when the window goes away or the extension is disabled.
+    ExtensionState.registerUnloader(win, function() {
+      Cu.nukeSandbox(sandbox);
+    });
+    var api = new API(win, ExtensionState);
+    sandbox.chrome = api.chrome;
+    sandbox.ancho = api.ancho;
+    sandbox.console = api.console;
+    sandbox.XMLHttpRequest = Require.XMLHttpRequest;
     for (var i=0; i<contentScripts.length; i++) {
       var scriptInfo = contentScripts[i];
       var matches = scriptInfo.matches;
-      var principal;
-      // Preserving backwards compatibility with FF18 and older.
-      if (Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo).version.split('.')[0] >= 19) {
-        principal = CC('@mozilla.org/systemprincipal;1', 'nsIPrincipal')();
-      }
-      else {
-        principal = ExtensionState.backgroundWindow;
-      }
-      var sandbox = Cu.Sandbox(principal, { sandboxPrototype: win });
-      var api = new API(win, ExtensionState);
-      sandbox.chrome = api.chrome;
-      sandbox.ancho = api.ancho;
-      sandbox.console = api.console;
-      sandbox.XMLHttpRequest = Require.XMLHttpRequest;
       for (var j=0; j<matches.length; j++) {
         if (spec.match(matches[j])) {
           for (var k=0; k<scriptInfo.js.length; k++) {
@@ -65,8 +69,8 @@
           }
           break;
         }
-      } // for
-    } // for
+      }
+    }
   };
 
   // When we load a privileged HTML page we want all scripts to load as content
