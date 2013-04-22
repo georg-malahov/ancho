@@ -40,8 +40,13 @@
       principal = ExtensionState.backgroundWindow;
     }
     var sandbox = Cu.Sandbox(principal, { sandboxPrototype: win });
+    var eventUnloaders = [];
     // Destroy the sandbox when the window goes away or the extension is disabled.
     ExtensionState.registerUnloader(win, function() {
+      // Remove event handlers registered by jQuery.
+      for (var i=0; i<eventUnloaders.length; i++) {
+        eventUnloaders[i]();
+      }
       Cu.nukeSandbox(sandbox);
     });
     var api = new API(win, ExtensionState);
@@ -49,14 +54,24 @@
     sandbox.ancho = api.ancho;
     sandbox.console = api.console;
     sandbox.XMLHttpRequest = Require.XMLHttpRequest;
+    var processedJQuery = false;
+    var events = [];
     for (var i=0; i<contentScripts.length; i++) {
       var scriptInfo = contentScripts[i];
       var matches = scriptInfo.matches;
       for (var j=0; j<matches.length; j++) {
         if (spec.match(matches[j])) {
           for (var k=0; k<scriptInfo.js.length; k++) {
-            if (sandbox.jQuery) {
+            if (sandbox.jQuery && !processedJQuery) {
               sandbox.jQuery.ajaxSettings.xhr = Require.createWrappedXMLHttpRequest;
+              var jQueryEventAdd = sandbox.jQuery.event.add;
+              sandbox.jQuery.event.add = function(elem, types, handler, data, selector) {
+                jQueryEventAdd(elem, types, handler, data, selector);
+                eventUnloaders.push(function() {
+                  sandbox.jQuery.event.remove(elem, types, handler, selector);
+                });
+              };
+              processedJQuery = true;
             }
             var scriptUri = Services.io.newURI(Config.hostExtensionRoot
                   + scriptInfo.js[k], '', null);
