@@ -122,7 +122,10 @@ window.addEventListener('load', function(event) {
     browserWindow.document.addEventListener('readystatechange', function(e) {
       if ('complete' === browserWindow.document.readyState) {
         browserWindow.document.removeEventListener('readystatechange', arguments.callee, false);
-        runBackground();
+        // TODO: Figure out why loading the background window directly from the event listener
+        // causes its compartment to leak when the extension is disabled.
+        // Using setTimeout() is a workaround and appears to fix the problem.
+        setTimeout(runBackground, 0);
       }
     }, false);
   }

@@ -76,6 +76,8 @@
     onStopRequest: function(aRequest, aContext, aStatusCode) {
       let request = (aRequest === this._channel) ? this : aRequest;
       this._listener.onStopRequest(request, aContext, aStatusCode);
+      // The listeners references us so we null our reference to break the cycle.
+      this._listener = null;
     },
 
     // nsIChannel

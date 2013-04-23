@@ -170,6 +170,7 @@ function unloadBackgroundScripts() {
 }
 
 function closeStorageConnection() {
+  var extensionState = require('./js/state');
   if (extensionState.storageConnection) {
     extensionState.storageConnection.asyncClose();
   }
@@ -200,4 +201,5 @@ function shutdown(data, reason) {
 
   // Unload the modules so that we will load new versions if the add-on is installed again.
   Cu.unload('resource://ancho/modules/Require.jsm');
+  Cu.unload('resource://ancho/modules/External.jsm');
 }

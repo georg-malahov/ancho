@@ -23,7 +23,7 @@
     iconEnabled: false,
     buttonId: null,
     badgeText: null,
-    badgeBackgroundColor: [ 255, 0, 0 , 255 ],
+    badgeBackgroundColor: "#f00",
     tabBadgeText: {},
     tabBadgeBackgroundColor: {},
 
@@ -43,8 +43,10 @@
         };
         container.addEventListener('TabSelect', context.listener, false);
       }, function(win, context) {
-        self.shutdown(win);
+        var tabbrowser = win.document.getElementById('content');
+        var container = tabbrowser.tabContainer;
         container.removeEventListener('TabSelect', context.listener, false);
+        self.shutdown(win);
       });
     },
 
@@ -67,7 +69,12 @@
       toolbarButton.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
       toolbarButton.setAttribute("label", Config.extensionName);
 
-      document.getElementById(NAVIGATOR_TOOLBOX).palette.appendChild(toolbarButton);
+      var iconPath = this.iconEnabled ? Config.hostExtensionRoot + Config.browser_action.default_icon : '';
+      toolbarButton.style.listStyleImage = "url(" + iconPath + ")";
+
+      var palette = document.getElementById(NAVIGATOR_TOOLBOX).palette;
+      palette.appendChild(toolbarButton);
+
       var currentset = toolbar.getAttribute("currentset").split(",");
       var index = currentset.indexOf(id);
       if (index === -1) {
@@ -106,7 +113,6 @@
 
       var self = this;
       toolbarButton.addEventListener('click', function(event) { self.clickHandler(event); }, false);
-      var iconPath = this.iconEnabled ? Config.hostExtensionRoot + Config.browser_action.default_icon : '';
       this.setIcon(window, { path: iconPath });
     },
 
@@ -147,7 +153,6 @@
               oldHeight + getPanelBorderWidth('Top') + getPanelBorderWidth('Bottom'));
           }
         }
-
         iframe.contentDocument.addEventListener('MozScrolledAreaChanged', function(event) {
           resizePopup();
         }, false);
@@ -191,12 +196,7 @@
         var y = canvas.height - h - 1; // 1 = bottom padding
 
         var color = this.getBadgeBackgroundColor(tabId);
-        if (color) {
-          ctx.fillStyle = color;
-        }
-        else {
-          ctx.fillStyle = "#f00"; // default color is red
-        }
+        ctx.fillStyle = color;
         ctx.fillRect(x-rp, y-1, w+rp+rp, h+2);
         ctx.fillStyle = "#fff"; // text color
         ctx.fillText(text, x, y);
@@ -262,9 +262,9 @@
         document = window.document;
         var toolbarButton = document.getElementById(this.buttonId);
         var toolbar = document.getElementById(TOOLBAR_ID);
-        var palette = document.getElementById(NAVIGATOR_TOOLBOX).palette;
-        toolbar.removeChild(toolbarButton);
-        palette.removeChild(toolbarButton);
+        if (toolbar.contains(toolbarButton)) {
+          toolbar.removeChild(toolbarButton);
+        }
       }
     },
 

@@ -15,6 +15,6 @@
   </popupset>
 
   <!-- regular code -->
-  <browser id="content" type="chrome" />
+  <browser id="content" type="chrome" disablehistory="true" />
 
 </window>
