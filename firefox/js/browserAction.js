@@ -10,7 +10,7 @@
   var Config = require('./config');
 
   const BUTTON_ID = '__ANCHO_BROWSER_ACTION_BUTTON__';
-  const CANVAS_ID = '__ANCHO_BROWSER_ACITOON_CANVAS__';
+  const CANVAS_ID = '__ANCHO_BROWSER_ACTION_CANVAS__';
   const HBOX_ID = '__ANCHO_BROWSER_ACTION_HBOX__';
   const IMAGE_ID = '__ANCHO_BROWSER_ACTION_IMAGE__'
   const NAVIGATOR_TOOLBOX = 'navigator-toolbox';
@@ -293,7 +293,7 @@
     },
 
     setBadgeBackgroundColor: function(tabId, color) {
-      if (tabId) {
+      if ('undefined' !== typeof(tabId)) {
         this.tabBadgeBackgroundColor[tabId] = color;
       }
       else {
@@ -303,7 +303,7 @@
     },
 
     setBadgeText: function(tabId, text) {
-      if (tabId) {
+      if ('undefined' !== typeof(tabId)) {
         this.tabBadgeText[tabId] = text;
       }
       else {
@@ -338,11 +338,13 @@
   BrowserActionAPI.prototype.setBadgeBackgroundColor = function(details) {
     function colorToString(color) {
       if ('string' === typeof(color)) {
+        // TODO: Support three digit RGB codes.
         if (/#[0-9A-F]{6}/i.exec(color)) {
           return color;
         }
       } else if (Array.isArray(color)){
         if (color.length === 3) {
+          // TODO: Support alpha.
           var str = '#';
           for (var i = 0; i < 3; ++i) {
             var tmp = Math.max(0, Math.min(color[i], 255))

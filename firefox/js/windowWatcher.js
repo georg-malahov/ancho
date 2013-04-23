@@ -26,9 +26,7 @@
       Services.ww.unregisterNotification(this.notificationListener);
       this.notificationListener = null;
     }
-    this.forAllWindows(function(browserWindow) {
-      this.fire(false, browserWindow);
-    });
+    this.forAllWindows(this.fire.bind(this, false));
   };
 
   WindowWatcherImpl.prototype.load = function() {
