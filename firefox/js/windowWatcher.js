@@ -44,9 +44,7 @@
 
   WindowWatcherImpl.prototype.unload = function() {
     Services.ww.unregisterNotification(this);
-    this.forAllWindows(function(browserWindow) {
-      this.fire(false, browserWindow);
-    });
+    this.forAllWindows(this.fire.bind(this, false));
     this.registry = [];
   };
 
