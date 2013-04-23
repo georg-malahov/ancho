@@ -4,6 +4,13 @@ project (AnchoFramework)
 add_definitions(-DUNICODE -D_UNICODE)
 option(DISABLE_REGISTRATION "Disable registration" OFF)
 
+option(ANCHO_WTL_SEARCH "Whether cmake should look for the WTL" OFF)
+if(${ANCHO_WTL_SEARCH})
+  find_path(WTL_INCLUDE_DIR "atlapp.h")
+  include_directories(${WTL_INCLUDE_DIR})
+endif(${ANCHO_WTL_SEARCH})
+
+
 add_subdirectory(libbhohelper)
 include_directories(${libbhohelper_INC_DIR})
 link_directories(${libbhohelper_ARCHIVE_DIR})

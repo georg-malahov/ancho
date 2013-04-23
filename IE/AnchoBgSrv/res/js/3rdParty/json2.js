@@ -240,7 +240,7 @@ if (typeof JSON !== 'object') {
 // If the value has a toJSON method, call it to obtain a replacement value.
 
         if (value && typeof value === 'object' &&
-                typeof value.toJSON === 'function') {
+                value.toJSON/* === 'function'*/) {
             value = value.toJSON(key);
         }
 
@@ -291,7 +291,8 @@ if (typeof JSON !== 'object') {
 
 // Is the value an array?
 
-            if (Object.prototype.toString.apply(value) === '[object Array]') {
+        //HOTFIX - checking for array fails when the object was constructed in different engine instance
+            if ((typeof value.length === 'number') && ('push' in value) /*Object.prototype.toString.apply(value) === '[object Array]'*/) {
 
 // The value is an array. Stringify every element. Use null as a placeholder
 // for non-JSON values.

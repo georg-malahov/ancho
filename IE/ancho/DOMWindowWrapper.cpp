@@ -7,6 +7,30 @@
 #include "StdAfx.h"
 #include "DOMWindowWrapper.h"
 
+
+// ---------------------------------------------------------------------------
+// HTMLLocationWrapper::createInstance
+HRESULT HTMLLocationWrapper::createInstance(IHTMLWindow2 * aHTMLWindow,
+                              ComPtr & aRet)
+{
+  if (!aHTMLWindow) {
+    return E_INVALIDARG;
+  }
+  CComPtr<IHTMLLocation> htmlLocation;
+  IF_FAILED_RET(aHTMLWindow->get_location(&htmlLocation.p));
+
+  ComObject * locationObject = NULL;
+  IF_FAILED_RET(ComObject::CreateInstance(&locationObject));
+  ComPtr ptr = locationObject;
+
+  locationObject->mLocation = htmlLocation;
+  if (!locationObject->mLocation) {
+    return E_UNEXPECTED;
+  }
+  aRet = ptr;
+  return S_OK;
+}
+
 // ---------------------------------------------------------------------------
 // HTMLWindowInterfaces::operator =
 DOMWindowWrapper::HTMLWindowInterfaces &
@@ -94,6 +118,9 @@ HRESULT DOMWindowWrapper::init(IWebBrowser2 * aWebBrowser)
     return E_INVALIDARG;
   }
 
+  // location-wrapper
+  IF_FAILED_RET(HTMLLocationWrapper::createInstance(mDOMWindowInterfaces.w2, mLocation));
+
   // also create NULL properties for all events in getEventPropertyName
   mDOMEventProperties[DISPID_ONBEFOREUNLOAD].vt = VT_NULL;
   mDOMEventProperties[DISPID_ONMESSAGE].vt = VT_NULL;
@@ -124,6 +151,7 @@ void DOMWindowWrapper::cleanup()
   mDOMWindowPropertyIDs.clear();
   mDOMWindowPropertyNames.clear();
   mDOMEventProperties.clear();
+  mLocation.Release();
 }
 
 // ---------------------------------------------------------------------------
@@ -174,6 +202,16 @@ HRESULT DOMWindowWrapper::dispatchPropertyGet(WORD wFlags, DISPID dispIdMember,
 {
   MapDISPIDToCComVariant::const_iterator it = mDOMWindowProperties.end();
   BOOL propertyFound = FALSE;
+
+  if (DISPID_LOCATION == dispIdMember) {
+    aHandled = TRUE;
+    CComVariant vt((IDispatch*)mLocation);
+    ATLASSERT(pVarResult);
+    if (VT_DISPATCH != vt.vt) {
+      return DISP_E_MEMBERNOTFOUND;
+    }
+    return vt.Detach(pVarResult);
+  }
 
   const wchar_t * eventName = getEventPropertyName(dispIdMember);
   if (eventName) {
